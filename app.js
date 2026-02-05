@@ -448,10 +448,7 @@ const MenuUI = {
           color: #f44336;
           font-weight: bold;
           font-size: 0.85rem;
-          margin-top: 10px;
-          background: rgba(244, 67, 54, 0.1);
-          padding: 5px 10px;
-          border-radius: 5px;
+          margin-top: 8px;
         `;
         info.appendChild(unavailableTag);
       }
@@ -459,7 +456,7 @@ const MenuUI = {
   },
 
   getPlaceholderImage() {
-    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='140'%3E%3Crect fill='%23222' width='200' height='140'/%3E%3Ctext fill='%23666' x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-family='sans-serif' font-size='14'%3ESem imagem%3C/text%3E%3C/svg%3E";
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3Ctext fill='%23666' x='50%25' y='50%25' text-anchor='middle' dy='.3em' font-family='Arial' font-size='14'%3ESem imagem%3C/text%3E%3C/svg%3E";
   },
 
   renderError() {
@@ -623,9 +620,9 @@ const OrderFlow = {
   buildStepsForBurger(item, burgerName, ingredients) {
     const steps = [];
 
-    if (item.pontoCarne && Array.isArray(item.pontoCarne)) {
-      steps.push({ type: "meatPoint", data: item.pontoCarne, burgerName });
-    }
+    // SEMPRE adiciona o step de ponto da carne para burgers
+    const pontosPadrao = ["Mal passado", "Ao ponto", "Bem passado"];
+    steps.push({ type: "meatPoint", data: pontosPadrao, burgerName });
 
     if (item.caldas && Array.isArray(item.caldas)) {
       steps.push({ type: "caldas", data: item.caldas, burgerName });
@@ -659,8 +656,10 @@ const OrderFlow = {
   buildStepsForItem(item, selectedSize) {
     const steps = [];
 
-    if (item.pontoCarne && Array.isArray(item.pontoCarne)) {
-      steps.push({ type: "meatPoint", data: item.pontoCarne });
+    // Adiciona ponto da carne se for categoria Artesanais
+    const pontosPadrao = ["Mal passado", "Ao ponto", "Bem passado"];
+    if (item.categoria === "Artesanais" || item.pontoCarne) {
+      steps.push({ type: "meatPoint", data: item.pontoCarne || pontosPadrao });
     }
 
     if (item.caldas && Array.isArray(item.caldas)) {
@@ -800,73 +799,50 @@ const OrderFlow = {
       })
       .join("");
 
-    // Torna toda a linha clicável
-    body.querySelectorAll(".option-row").forEach((row) => {
-      const checkbox = row.querySelector('input[type="checkbox"]');
-      row.addEventListener("click", (e) => {
-        // Se clicar no checkbox, deixa ele lidar naturalmente
-        // Se clicar em qualquer outro lugar (label, div), toggle o checkbox
-        if (e.target.tagName !== "INPUT") {
-          e.preventDefault();
-          checkbox.checked = !checkbox.checked;
-          checkbox.dispatchEvent(new Event("change"));
-        }
-      });
-    });
-
-    body.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    body.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.onchange = (e) => {
-        const val = e.target.value;
+        const value = e.target.value;
         if (e.target.checked) {
-          if (!AppState.tempItem.selectedCaldas.includes(val))
-            AppState.tempItem.selectedCaldas.push(val);
+          if (!AppState.tempItem.selectedCaldas.includes(value)) {
+            AppState.tempItem.selectedCaldas.push(value);
+          }
         } else {
-          AppState.tempItem.selectedCaldas =
-            AppState.tempItem.selectedCaldas.filter((c) => c !== val);
+          const idx = AppState.tempItem.selectedCaldas.indexOf(value);
+          if (idx > -1) AppState.tempItem.selectedCaldas.splice(idx, 1);
         }
       };
     });
   },
 
-  renderRetiradas(title, body, options, burgerName) {
+  renderRetiradas(title, body, ingredients, burgerName) {
     const displayName = burgerName || AppState.tempItem.nome;
-    title.textContent = `${displayName} - Remover algo?`;
+    title.textContent = `${displayName} - Retirar Ingredientes ❌`;
 
-    body.innerHTML = options
-      .map(
-        (opt, i) => `
-      <div class="option-row">
-        <label for="rem-${i}" style="flex:1; cursor:pointer;">${opt}</label>
-        <input type="checkbox" id="rem-${i}" value="${opt}" ${AppState.tempItem.removed.includes(opt) ? "checked" : ""}>
-      </div>
-    `,
-      )
+    if (!AppState.tempItem.removed) AppState.tempItem.removed = [];
+
+    body.innerHTML = ingredients
+      .map((ing, index) => {
+        const isChecked = AppState.tempItem.removed.includes(ing);
+        const id = `remove-${index}`;
+        return `
+          <div class="option-row">
+            <label for="${id}" style="flex: 1; cursor: pointer;">${ing}</label>
+            <input type="checkbox" id="${id}" value="${ing}" ${isChecked ? "checked" : ""}>
+          </div>
+        `;
+      })
       .join("");
 
-    // Torna toda a linha clicável
-    body.querySelectorAll(".option-row").forEach((row) => {
-      const checkbox = row.querySelector('input[type="checkbox"]');
-      row.addEventListener("click", (e) => {
-        // Se clicar no checkbox, deixa ele lidar naturalmente
-        // Se clicar em qualquer outro lugar (label, div), toggle o checkbox
-        if (e.target.tagName !== "INPUT") {
-          e.preventDefault();
-          checkbox.checked = !checkbox.checked;
-          checkbox.dispatchEvent(new Event("change"));
-        }
-      });
-    });
-
-    body.querySelectorAll("input").forEach((input) => {
+    body.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.onchange = (e) => {
-        const val = e.target.value;
+        const value = e.target.value;
         if (e.target.checked) {
-          if (!AppState.tempItem.removed.includes(val))
-            AppState.tempItem.removed.push(val);
+          if (!AppState.tempItem.removed.includes(value)) {
+            AppState.tempItem.removed.push(value);
+          }
         } else {
-          AppState.tempItem.removed = AppState.tempItem.removed.filter(
-            (item) => item !== val,
-          );
+          const idx = AppState.tempItem.removed.indexOf(value);
+          if (idx > -1) AppState.tempItem.removed.splice(idx, 1);
         }
       };
     });
@@ -874,46 +850,47 @@ const OrderFlow = {
 
   renderExtras(title, body, extras, burgerName) {
     const displayName = burgerName || AppState.tempItem.nome;
-    title.textContent = `${displayName} - Adicionais (pagos) 🍔`;
+    title.textContent = `${displayName} - Adicionais Pagos 💰`;
+
+    if (!AppState.tempItem.added) AppState.tempItem.added = [];
 
     body.innerHTML = extras
-      .map(
-        (extra, i) => `
-      <div class="option-row">
-        <label for="extra-${i}" style="flex:1; cursor:pointer;">${extra.nome} (+${Utils.formatPrice(extra.preco)})</label>
-        <input type="checkbox" id="extra-${i}" value="${extra.nome}" data-price="${extra.preco}"
-          ${AppState.tempItem.added.some((a) => a.nome === extra.nome) ? "checked" : ""}>
-      </div>
-    `,
-      )
+      .map((extra, index) => {
+        const isChecked = AppState.tempItem.added.some(
+          (a) => a.nome === extra.nome,
+        );
+        const id = `extra-${index}`;
+        return `
+          <div class="option-row">
+            <label for="${id}" style="flex: 1; cursor: pointer;">
+              ${extra.nome} <span style="color: var(--primary);">+ ${Utils.formatPrice(extra.preco)}</span>
+            </label>
+            <input type="checkbox" id="${id}" value="${index}" ${isChecked ? "checked" : ""}>
+          </div>
+        `;
+      })
       .join("");
 
-    // Torna toda a linha clicável
-    body.querySelectorAll(".option-row").forEach((row) => {
-      const checkbox = row.querySelector('input[type="checkbox"]');
-      row.addEventListener("click", (e) => {
-        // Se clicar no checkbox, deixa ele lidar naturalmente
-        // Se clicar em qualquer outro lugar (label, div), toggle o checkbox
-        if (e.target.tagName !== "INPUT") {
-          e.preventDefault();
-          checkbox.checked = !checkbox.checked;
-          checkbox.dispatchEvent(new Event("change"));
-        }
-      });
-    });
-
-    body.querySelectorAll("input").forEach((input) => {
+    body.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.onchange = (e) => {
-        const nome = e.target.value;
-        const preco = parseFloat(e.target.dataset.price);
+        const extraIndex = parseInt(e.target.value);
+        const extra = extras[extraIndex];
+
         if (e.target.checked) {
-          AppState.tempItem.added.push({ nome, preco });
-          AppState.tempItem.finalPrice += preco;
-        } else {
-          AppState.tempItem.added = AppState.tempItem.added.filter(
-            (a) => a.nome !== nome,
+          const alreadyAdded = AppState.tempItem.added.some(
+            (a) => a.nome === extra.nome,
           );
-          AppState.tempItem.finalPrice -= preco;
+          if (!alreadyAdded) {
+            AppState.tempItem.added.push({
+              nome: extra.nome,
+              preco: extra.preco,
+            });
+          }
+        } else {
+          const idx = AppState.tempItem.added.findIndex(
+            (a) => a.nome === extra.nome,
+          );
+          if (idx > -1) AppState.tempItem.added.splice(idx, 1);
         }
       };
     });
@@ -921,91 +898,101 @@ const OrderFlow = {
 
   renderObservacoes(title, body, burgerName) {
     const displayName = burgerName || AppState.tempItem.nome;
-    title.textContent = `${displayName} - Alguma observação? 💬`;
+    title.textContent = `${displayName} - Observações 💬`;
 
     body.innerHTML = `
-      <textarea 
-        class="obs-textarea" 
-        placeholder="Se precisar de alguma observação, digite aqui. Caso contrário, prossiga com o pedido."
-        style="width:100%; min-height:120px; padding:12px; background:#111; color:#fff; border:1px solid #333; border-radius:8px; font-family:inherit;"
+      <textarea
+        id="obs-input"
+        placeholder="Adicione alguma observação especial..."
+        style="
+          width: 100%;
+          min-height: 120px;
+          padding: 15px;
+          background: #111;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          color: white;
+          font-size: 0.95rem;
+          resize: vertical;
+          outline: none;
+        "
       >${AppState.tempItem.obs || ""}</textarea>
     `;
 
-    body.querySelector("textarea").oninput = (e) => {
-      AppState.tempItem.obs = e.target.value;
-    };
+    const textarea = body.querySelector("#obs-input");
+    textarea.oninput = (e) => (AppState.tempItem.obs = e.target.value);
   },
 
-  renderBatataUpgrade(title, body, options) {
+  renderBatataUpgrade(title, body, upgrades) {
     title.textContent = "Escolha a Batata 🍟";
 
-    body.innerHTML = options
+    const currentSelection = AppState.comboData.selectedBatata;
+
+    body.innerHTML = upgrades
       .map((opt, i) => {
-        const isChecked = AppState.comboData.selectedBatata === opt.nome;
+        const isSelected = currentSelection === opt.nome;
+        const priceText =
+          opt.adicional > 0
+            ? `+${Utils.formatPrice(opt.adicional)}`
+            : opt.adicional < 0
+              ? Utils.formatPrice(opt.adicional)
+              : "Inclusa";
+
         return `
-      <div class="option-row">
-        <label for="batata-${i}" style="flex:1; cursor:pointer;">
-          ${opt.nome} 
-          ${opt.adicional !== 0 ? `(${opt.adicional > 0 ? "+" : ""}${Utils.formatPrice(opt.adicional)})` : ""}
-        </label>
-        <input type="radio" id="batata-${i}" name="batataUpgrade" value="${opt.nome}" 
-          data-price="${opt.adicional}" ${isChecked ? "checked" : ""}>
-      </div>
-    `;
+          <div class="option-row">
+            <label for="batata-${i}" style="flex:1; cursor:pointer;">
+              ${opt.nome} <span style="color: var(--primary);">${priceText}</span>
+            </label>
+            <input type="radio" id="batata-${i}" name="batataUpgrade" value="${i}" ${isSelected ? "checked" : ""}>
+          </div>
+        `;
       })
       .join("");
 
-    body.querySelectorAll('input[type="radio"]').forEach((input) => {
+    body.querySelectorAll("input").forEach((input) => {
       input.onchange = (e) => {
-        AppState.comboData.selectedBatata = e.target.value;
-        AppState.comboData.batataPriceAdjust = parseFloat(
-          e.target.dataset.price,
-        );
+        const selectedIndex = parseInt(e.target.value);
+        const selected = upgrades[selectedIndex];
+        AppState.comboData.selectedBatata = selected.nome;
+        AppState.comboData.batataPriceAdjust = selected.adicional || 0;
       };
     });
-
-    // Seleciona a primeira opção por padrão
-    if (!AppState.comboData.selectedBatata && options.length > 0) {
-      AppState.comboData.selectedBatata = options[0].nome;
-      AppState.comboData.batataPriceAdjust = options[0].adicional;
-      body.querySelector('input[type="radio"]').checked = true;
-    }
   },
 
-  renderBebidaUpgrade(title, body, options) {
+  renderBebidaUpgrade(title, body, upgrades) {
     title.textContent = "Escolha a Bebida 🥤";
 
-    body.innerHTML = options
+    const currentSelection = AppState.comboData.selectedBebida;
+
+    body.innerHTML = upgrades
       .map((opt, i) => {
-        const isChecked = AppState.comboData.selectedBebida === opt.nome;
+        const isSelected = currentSelection === opt.nome;
+        const priceText =
+          opt.adicional > 0
+            ? `+${Utils.formatPrice(opt.adicional)}`
+            : opt.adicional < 0
+              ? Utils.formatPrice(opt.adicional)
+              : "Inclusa";
+
         return `
-      <div class="option-row">
-        <label for="bebida-${i}" style="flex:1; cursor:pointer;">
-          ${opt.nome} 
-          ${opt.adicional !== 0 ? `(${opt.adicional > 0 ? "+" : ""}${Utils.formatPrice(opt.adicional)})` : ""}
-        </label>
-        <input type="radio" id="bebida-${i}" name="bebidaUpgrade" value="${opt.nome}" 
-          data-price="${opt.adicional}" ${isChecked ? "checked" : ""}>
-      </div>
-    `;
+          <div class="option-row">
+            <label for="bebida-${i}" style="flex:1; cursor:pointer;">
+              ${opt.nome} <span style="color: var(--primary);">${priceText}</span>
+            </label>
+            <input type="radio" id="bebida-${i}" name="bebidaUpgrade" value="${i}" ${isSelected ? "checked" : ""}>
+          </div>
+        `;
       })
       .join("");
 
-    body.querySelectorAll('input[type="radio"]').forEach((input) => {
+    body.querySelectorAll("input").forEach((input) => {
       input.onchange = (e) => {
-        AppState.comboData.selectedBebida = e.target.value;
-        AppState.comboData.bebidaPriceAdjust = parseFloat(
-          e.target.dataset.price,
-        );
+        const selectedIndex = parseInt(e.target.value);
+        const selected = upgrades[selectedIndex];
+        AppState.comboData.selectedBebida = selected.nome;
+        AppState.comboData.bebidaPriceAdjust = selected.adicional || 0;
       };
     });
-
-    // Seleciona a primeira opção por padrão
-    if (!AppState.comboData.selectedBebida && options.length > 0) {
-      AppState.comboData.selectedBebida = options[0].nome;
-      AppState.comboData.bebidaPriceAdjust = options[0].adicional;
-      body.querySelector('input[type="radio"]').checked = true;
-    }
   },
 
   nextStep() {
@@ -1013,91 +1000,8 @@ const OrderFlow = {
       AppState.currentStep++;
       this.renderCurrentStep();
     } else {
-      if (AppState.isCombo) this.finishCurrentBurger();
-      else this.finishSingleItem();
+      this.completeCurrentItem();
     }
-  },
-
-  finishCurrentBurger() {
-    AppState.comboItems.push({ ...AppState.tempItem });
-
-    const isLastBurger =
-      AppState.currentBurgerIndex ===
-      AppState.comboData.itemRef.burgers.length - 1;
-
-    if (!isLastBurger) {
-      // Ainda tem burgers para personalizar
-      AppState.currentBurgerIndex++;
-      this.startNextBurgerInCombo();
-    } else if (AppState.isFullCombo) {
-      // Último burger de um combo COMPLETO - vai para batata
-      this.startBatataStep();
-    } else {
-      // Último burger de um combo SIMPLES - finaliza
-      this.finishCombo();
-    }
-  },
-
-  startBatataStep() {
-    const { upgrades } = AppState.comboData;
-
-    AppState.stepsData = [
-      { type: "batataUpgrade", data: upgrades.batata },
-      { type: "bebidaUpgrade", data: upgrades.bebida },
-    ];
-    AppState.currentStep = 0;
-
-    this.renderCurrentStep();
-  },
-
-  finishCombo() {
-    let totalAddedPrice = 0;
-    AppState.comboItems.forEach((burger) => {
-      totalAddedPrice += burger.finalPrice;
-    });
-
-    // Adiciona ajustes de batata e bebida se for combo completo
-    if (AppState.isFullCombo) {
-      totalAddedPrice +=
-        AppState.comboData.batataPriceAdjust +
-        AppState.comboData.bebidaPriceAdjust;
-    }
-
-    const comboFinalPrice = AppState.comboData.basePrice + totalAddedPrice;
-
-    const comboItem = {
-      nome: AppState.comboData.nomeCombo,
-      categoria: AppState.comboData.categoria,
-      selectedSize: AppState.comboData.selectedSize,
-      selectedPrice: AppState.comboData.basePrice,
-      isCombo: true,
-      burgers: AppState.comboItems,
-      finalPrice: comboFinalPrice,
-    };
-
-    // Adiciona info de batata e bebida se for combo completo
-    if (AppState.isFullCombo) {
-      comboItem.selectedBatata = AppState.comboData.selectedBatata;
-      comboItem.selectedBebida = AppState.comboData.selectedBebida;
-      comboItem.batataPriceAdjust = AppState.comboData.batataPriceAdjust;
-      comboItem.bebidaPriceAdjust = AppState.comboData.bebidaPriceAdjust;
-    }
-
-    CartManager.add(comboItem);
-    showToast("✅ Combo adicionado ao carrinho!");
-    ModalUI.close();
-
-    AppState.isCombo = false;
-    AppState.isFullCombo = false;
-    AppState.comboData = null;
-    AppState.currentBurgerIndex = 0;
-    AppState.comboItems = [];
-  },
-
-  finishSingleItem() {
-    CartManager.add(AppState.tempItem);
-    showToast("✅ Adicionado ao carrinho!");
-    ModalUI.close();
   },
 
   prevStep() {
@@ -1106,7 +1010,103 @@ const OrderFlow = {
       this.renderCurrentStep();
     }
   },
+
+  completeCurrentItem() {
+    if (AppState.isCombo) {
+      this.saveComboItem();
+
+      AppState.currentBurgerIndex++;
+
+      if (
+        AppState.currentBurgerIndex < AppState.comboData.itemRef.burgers.length
+      ) {
+        this.startNextBurgerInCombo();
+      } else if (AppState.isFullCombo) {
+        this.showComboUpgrades();
+      } else {
+        this.finalizeCombo();
+      }
+    } else {
+      this.finalizeSingleItem();
+    }
+  },
+
+  saveComboItem() {
+    const extrasTotal = (AppState.tempItem.added || []).reduce(
+      (sum, extra) => sum + extra.preco,
+      0,
+    );
+    AppState.tempItem.finalPrice = extrasTotal;
+
+    AppState.comboItems.push({ ...AppState.tempItem });
+  },
+
+  showComboUpgrades() {
+    const { upgrades } = AppState.comboData;
+
+    AppState.stepsData = [
+      { type: "batataUpgrade", data: upgrades.batata },
+      { type: "bebidaUpgrade", data: upgrades.bebida },
+    ];
+
+    AppState.currentStep = 0;
+    this.renderCurrentStep();
+
+    DOM.elements.btnNext.onclick = () => {
+      if (AppState.currentStep === 0) {
+        AppState.currentStep = 1;
+        this.renderCurrentStep();
+      } else {
+        this.finalizeCombo();
+      }
+    };
+  },
+
+  finalizeCombo() {
+    const totalExtras = AppState.comboItems.reduce(
+      (sum, item) => sum + item.finalPrice,
+      0,
+    );
+
+    const finalPrice =
+      AppState.comboData.basePrice +
+      totalExtras +
+      (AppState.comboData.batataPriceAdjust || 0) +
+      (AppState.comboData.bebidaPriceAdjust || 0);
+
+    const comboItem = {
+      nome: AppState.comboData.nomeCombo,
+      img: AppState.comboData.itemRef.img,
+      categoria: AppState.comboData.categoria,
+      selectedSize: AppState.comboData.selectedSize,
+      selectedPrice: AppState.comboData.basePrice,
+      isCombo: true,
+      burgers: AppState.comboItems,
+      selectedBatata: AppState.comboData.selectedBatata || null,
+      selectedBebida: AppState.comboData.selectedBebida || null,
+      finalPrice: finalPrice,
+    };
+
+    CartManager.add(comboItem);
+    showToast("✅ Combo adicionado!");
+    ModalUI.close();
+  },
+
+  finalizeSingleItem() {
+    const extrasTotal = (AppState.tempItem.added || []).reduce(
+      (sum, extra) => sum + extra.preco,
+      0,
+    );
+
+    AppState.tempItem.finalPrice =
+      AppState.tempItem.selectedPrice + extrasTotal;
+
+    CartManager.add(AppState.tempItem);
+    showToast("✅ Item adicionado!");
+    ModalUI.close();
+  },
 };
+
 // ================================
 // CART UI
 // ================================
@@ -1169,7 +1169,28 @@ const CartUI = {
     if (item.isCombo && item.burgers) {
       detailsHtml += `<div style="color: var(--primary); font-weight: bold; margin-top: 5px;">Itens do Combo:</div>`;
       item.burgers.forEach((burger) => {
-        detailsHtml += `<div style="margin-left: 10px;">• ${burger.nome}</div>`;
+        detailsHtml += `<div style="margin-left: 10px; margin-top: 5px;">• <strong>${burger.nome}</strong></div>`;
+
+        // Mostrar ponto da carne
+        if (burger.meatPoint) {
+          detailsHtml += `<div style="margin-left: 20px; font-size: 0.8rem; color: #ccc;">Ponto: ${burger.meatPoint}</div>`;
+        }
+
+        // Mostrar ingredientes removidos
+        if (burger.removed && burger.removed.length > 0) {
+          detailsHtml += `<div style="margin-left: 20px; font-size: 0.8rem; color: #ff4444;">Sem: ${burger.removed.join(", ")}</div>`;
+        }
+
+        // Mostrar adicionais pagos
+        if (burger.added && burger.added.length > 0) {
+          const addedNames = burger.added.map((a) => a.nome).join(", ");
+          detailsHtml += `<div style="margin-left: 20px; font-size: 0.8rem; color: #4CAF50;">➕ ${addedNames}</div>`;
+        }
+
+        // Mostrar observações
+        if (burger.obs) {
+          detailsHtml += `<div style="margin-left: 20px; font-size: 0.8rem; color: #aaa;">💬 ${burger.obs}</div>`;
+        }
       });
       if (item.selectedBatata) {
         detailsHtml += `<div style="margin-top: 3px;">🍟 ${item.selectedBatata}</div>`;
@@ -1178,13 +1199,24 @@ const CartUI = {
         detailsHtml += `<div>🥤 ${item.selectedBebida}</div>`;
       }
     } else {
+      // Mostrar ponto da carne para itens individuais
+      if (item.meatPoint) {
+        detailsHtml += `<div style="margin-top: 3px;">🥩 Ponto: ${item.meatPoint}</div>`;
+      }
+
       if (item.selectedCaldas?.length)
-        detailsHtml += `<div>Calda: ${item.selectedCaldas.join(", ")}</div>`;
+        detailsHtml += `<div>🍯 Calda: ${item.selectedCaldas.join(", ")}</div>`;
+
       if (item.removed?.length)
-        detailsHtml += `<div style="color: #ff4444;">Sem: ${item.removed.join(", ")}</div>`;
+        detailsHtml += `<div style="color: #ff4444;">❌ Sem: ${item.removed.join(", ")}</div>`;
+
       if (item.added?.length) {
         const addedNames = item.added.map((a) => a.nome).join(", ");
         detailsHtml += `<div style="color: #4CAF50;">➕ Adicionais: ${addedNames}</div>`;
+      }
+
+      if (item.obs) {
+        detailsHtml += `<div style="margin-top: 3px; color: #aaa;">💬 ${item.obs}</div>`;
       }
     }
 
@@ -1283,8 +1315,44 @@ const CheckoutManager = {
             select.required = false;
           });
         }
+
+        CartUI.render();
       });
     });
+
+    const neighborhoodSelect = form.querySelector("[data-neighborhood-select]");
+    if (neighborhoodSelect) {
+      neighborhoodSelect.addEventListener("change", (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const fee = parseFloat(selectedOption.dataset.fee) || 0;
+        const neighborhoodValue = e.target.value;
+        const neighborhoodText =
+          selectedOption.textContent.split(" - ")[0] || "";
+
+        AppState.deliveryFee = fee;
+        AppState.selectedNeighborhood = {
+          value: neighborhoodValue,
+          text: neighborhoodText,
+        };
+
+        const feeDisplay = DOM.get("[data-delivery-fee-display]");
+        const feeValue = DOM.get("[data-delivery-fee-value]");
+
+        if (neighborhoodValue === "campo-grande") {
+          feeDisplay.style.display = "flex";
+          feeDisplay.classList.add("campo-grande");
+          feeValue.textContent = "A combinar";
+        } else if (fee > 0) {
+          feeDisplay.style.display = "flex";
+          feeDisplay.classList.remove("campo-grande");
+          feeValue.textContent = Utils.formatPrice(fee);
+        } else {
+          feeDisplay.style.display = "none";
+        }
+
+        CartUI.render();
+      });
+    }
 
     const paymentSelect = form.querySelector('[name="paymentMethod"]');
     if (paymentSelect) {
@@ -1292,140 +1360,92 @@ const CheckoutManager = {
         const changeField = DOM.elements.changeField;
         if (e.target.value === "dinheiro") {
           changeField.style.display = "block";
+          changeField.querySelector("input").required = false;
         } else {
           changeField.style.display = "none";
+          changeField.querySelector("input").required = false;
         }
-      });
-    }
-
-    // Listener para seleção de bairro
-    const neighborhoodSelect = form.querySelector("[data-neighborhood-select]");
-    if (neighborhoodSelect) {
-      neighborhoodSelect.addEventListener("change", (e) => {
-        this.handleNeighborhoodChange(e.target);
       });
     }
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this.handleCheckout(new FormData(form));
+      this.processCheckout(new FormData(form));
     });
   },
 
-  handleNeighborhoodChange(select) {
-    const selectedOption = select.options[select.selectedIndex];
-    const fee = parseFloat(selectedOption.dataset.fee || 0);
-    const neighborhoodValue = select.value;
-    const neighborhoodText = selectedOption.text;
+  processCheckout(formData) {
+    const data = Object.fromEntries(formData.entries());
 
-    AppState.deliveryFee = fee;
-    AppState.selectedNeighborhood = {
-      value: neighborhoodValue,
-      text: neighborhoodText,
-      fee: fee,
-    };
-
-    // Atualizar display da taxa
-    const feeDisplay = document.querySelector("[data-delivery-fee-display]");
-    const feeValue = document.querySelector("[data-delivery-fee-value]");
-
-    if (feeDisplay && feeValue) {
-      if (neighborhoodValue) {
-        feeDisplay.style.display = "flex";
-
-        if (neighborhoodValue === "campo-grande") {
-          feeValue.textContent = "A combinar";
-          feeDisplay.classList.add("campo-grande");
-          // Mostrar alert
-          alert(
-            "⚠️ ATENÇÃO: A taxa de entrega para Campo Grande será informada via WhatsApp.",
-          );
-        } else {
-          feeValue.textContent = `R$ ${fee.toFixed(2).replace(".", ",")}`;
-          feeDisplay.classList.remove("campo-grande");
-        }
-      } else {
-        feeDisplay.style.display = "none";
-        feeDisplay.classList.remove("campo-grande");
-      }
-    }
-
-    // Atualizar total
-    CartUI.render();
-  },
-
-  handleCheckout(formData) {
     if (AppState.cart.length === 0) {
-      showToast("⚠️ Seu carrinho está vazio!");
+      showToast("⚠️ Carrinho vazio");
       return;
     }
 
-    const data = {
-      customerName: formData.get("customerName"),
-      paymentMethod: formData.get("paymentMethod"),
-      changeFor: formData.get("changeFor"),
-    };
-
     if (AppState.deliveryType === "delivery") {
-      data.neighborhood = formData.get("neighborhood");
-      data.address = formData.get("address");
-      data.complement = formData.get("complement");
-      data.deliveryFee = AppState.deliveryFee;
-      data.neighborhoodInfo = AppState.selectedNeighborhood;
-
-      if (!data.neighborhood || !data.address) {
-        showToast("⚠️ Preencha o bairro e o endereço!");
+      if (!data.neighborhood) {
+        showToast("⚠️ Selecione o bairro de entrega");
         return;
       }
+
+      const selectedOption = DOM.get(
+        `[data-neighborhood-select] option[value="${data.neighborhood}"]`,
+      );
+      data.neighborhoodInfo = {
+        value: data.neighborhood,
+        text: selectedOption?.textContent.split(" - ")[0] || "",
+      };
     }
 
-    if (!data.customerName || !data.paymentMethod) {
-      showToast("⚠️ Preencha todos os campos obrigatórios!");
-      return;
-    }
-
-    this.sendToWhatsApp(data);
-    this.sendToKDS(data);
+    OrderSender.sendToWhatsApp(data);
+    OrderSender.sendToKDS(data);
   },
+};
 
+// ================================
+// ORDER SENDER
+// ================================
+const OrderSender = {
   sendToWhatsApp(data) {
-    let message = `🍔 *NOVO PEDIDO - RIBBS ZN* 🍔\n\n`;
+    let message = `🔥 *PEDIDO RIBBS ZN* 🔥\n\n`;
     message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `👤 *CLIENTE*\n`;
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `Nome: *${data.customerName}*\n`;
+    message += `📦 *TIPO:* ${AppState.deliveryType === "delivery" ? "🛵 ENTREGA" : "🏪 RETIRADA"}\n`;
 
     if (AppState.deliveryType === "delivery") {
-      message += `📍 Tipo: *ENTREGA*\n`;
-      message += `Endereço: ${data.address}, ${data.number}\n`;
-      if (data.complement) {
-        message += `Complemento: ${data.complement}\n`;
+      message += `📍 *Bairro:* ${data.neighborhoodInfo.text}\n`;
+      message += `📍 *Endereço:* ${data.address}\n`;
+      if (data.complement) message += `   ${data.complement}\n`;
+      if (
+        AppState.deliveryFee > 0 &&
+        AppState.selectedNeighborhood?.value !== "campo-grande"
+      ) {
+        message += `🛵 *Taxa de Entrega:* ${Utils.formatPrice(AppState.deliveryFee)}\n`;
+      } else if (AppState.selectedNeighborhood?.value === "campo-grande") {
+        message += `🛵 *Taxa de Entrega:* A combinar\n`;
       }
-    } else {
-      message += `📍 Tipo: *RETIRADA NO LOCAL*\n`;
     }
 
-    message += `\n━━━━━━━━━━━━━━━━━━\n`;
-    message += `📦 *ITENS DO PEDIDO:*\n`;
+    message += `👤 *Cliente:* ${data.customerName}\n`;
     message += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+    message += `🍔 *ITENS DO PEDIDO:*\n\n`;
 
     AppState.cart.forEach((item, idx) => {
       message += `${idx + 1}. *${item.nome}*\n`;
 
       if (item.isCombo && item.burgers) {
-        message += `   📦 Combo contém:\n`;
         item.burgers.forEach((burger) => {
-          message += `   • *${burger.nome}*\n`;
-          if (burger.meatPoint) message += `     Ponto: ${burger.meatPoint}\n`;
+          message += `   --- ${burger.nome} ---\n`;
+          if (burger.meatPoint) message += `   🥩 Ponto: ${burger.meatPoint}\n`;
           if (burger.selectedCaldas && burger.selectedCaldas.length)
-            message += `     Caldas: ${burger.selectedCaldas.join(", ")}\n`;
+            message += `   🍯 Caldas: ${burger.selectedCaldas.join(", ")}\n`;
           if (burger.removed && burger.removed.length) {
-            message += `     ❌ Sem: ${burger.removed.join(", ")}\n`;
+            message += `   ❌ Sem: ${burger.removed.join(", ")}\n`;
           }
           if (burger.added && burger.added.length) {
-            message += `     ➕ Adicionais: ${burger.added.map((a) => a.nome).join(", ")}\n`;
+            message += `   ➕ Adicionais: ${burger.added.map((a) => a.nome).join(", ")}\n`;
           }
-          if (burger.obs) message += `     💬 Obs: ${burger.obs}\n`;
+          if (burger.obs) message += `   💬 Obs: ${burger.obs}\n`;
         });
         if (item.selectedBatata) {
           message += `   🍟 Batata: ${item.selectedBatata}\n`;
@@ -1435,9 +1455,9 @@ const CheckoutManager = {
         }
       } else {
         if (item.selectedSize) message += `   Tamanho: ${item.selectedSize}\n`;
-        if (item.meatPoint) message += `   Ponto: ${item.meatPoint}\n`;
+        if (item.meatPoint) message += `   🥩 Ponto: ${item.meatPoint}\n`;
         if (item.selectedCaldas && item.selectedCaldas.length)
-          message += `   Caldas: ${item.selectedCaldas.join(", ")}\n`;
+          message += `   🍯 Caldas: ${item.selectedCaldas.join(", ")}\n`;
         if (item.removed && item.removed.length) {
           message += `   ❌ Sem: ${item.removed.join(", ")}\n`;
         }

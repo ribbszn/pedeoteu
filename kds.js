@@ -246,6 +246,41 @@ function renderOrder(orderId, order, isNew = false) {
 }
 
 // ================================
+// PARSE OBSERVATION (quebrar observação em detalhes)
+// ================================
+function parseObservationDetails(obs) {
+  if (!obs) return [];
+
+  const details = [];
+
+  // Dividir por " | " para pegar cada parte
+  const parts = obs.split(" | ");
+
+  parts.forEach((part) => {
+    const trimmed = part.trim();
+
+    if (trimmed.includes("---")) {
+      // Nome do produto (ex: "--- Smash Simples ---")
+      details.push({ type: "name", text: trimmed });
+    } else if (trimmed.toLowerCase().startsWith("ponto:")) {
+      // Ponto da carne
+      details.push({ type: "ponto", text: trimmed });
+    } else if (trimmed.toLowerCase().startsWith("sem:")) {
+      // Retiradas
+      details.push({ type: "retiradas", text: trimmed });
+    } else if (trimmed.toLowerCase().startsWith("adicionais:")) {
+      // Adicionais
+      details.push({ type: "adicionais", text: trimmed });
+    } else if (trimmed) {
+      // Qualquer outra observação
+      details.push({ type: "other", text: trimmed });
+    }
+  });
+
+  return details;
+}
+
+// ================================
 // RENDER ORDER ITEMS
 // ================================
 function renderOrderItems(items) {
@@ -260,15 +295,59 @@ function renderOrderItems(items) {
       const obs = item.observacao || "";
       const adicionais = item.adicionais || [];
       const retiradas = item.retiradas || [];
+      const ponto = item.ponto || "";
+
+      // Construir detalhes do item em linhas separadas
+      let detalhesHtml = "";
+
+      // Se tem observação, tentar parsear ela primeiro
+      if (obs) {
+        const parsedDetails = parseObservationDetails(obs);
+
+        if (parsedDetails.length > 0) {
+          // Se conseguiu parsear, usar os detalhes parseados
+          parsedDetails.forEach((detail) => {
+            let icon = "📝";
+
+            if (detail.type === "name") {
+              icon = "📝";
+            } else if (detail.type === "ponto") {
+              icon = "🔥";
+            } else if (detail.type === "retiradas") {
+              icon = "➖";
+            } else if (detail.type === "adicionais") {
+              icon = "➕";
+            }
+
+            detalhesHtml += `<div class="item-obs-line">${icon} ${detail.text}</div>`;
+          });
+        } else {
+          // Se não conseguiu parsear, mostrar observação normal
+          detalhesHtml += `<div class="item-obs-line">📝 ${obs}</div>`;
+        }
+      }
+
+      // Ponto da carne (se vier como campo separado)
+      if (ponto && !obs) {
+        detalhesHtml += `<div class="item-obs-line">🔥 Ponto: ${ponto}</div>`;
+      }
+
+      // Retiradas (se vier como array separado)
+      if (retiradas.length > 0 && !obs) {
+        detalhesHtml += `<div class="item-obs-line">➖ Sem: ${retiradas.join(", ")}</div>`;
+      }
+
+      // Adicionais (se vier como array separado)
+      if (adicionais.length > 0 && !obs) {
+        detalhesHtml += `<div class="item-obs-line">➕ Adicionais: ${adicionais.join(", ")}</div>`;
+      }
 
       return `
       <div class="order-item">
         <span class="item-qty">${qty}x</span>
         <div style="flex: 1;">
           <span class="item-name">${name}</span>
-          ${obs ? `<div class="item-obs">📝 ${obs}</div>` : ""}
-          ${adicionais.length > 0 ? `<div class="item-obs">➕ Adicionais: ${adicionais.join(", ")}</div>` : ""}
-          ${retiradas.length > 0 ? `<div class="item-obs">➖ Sem: ${retiradas.join(", ")}</div>` : ""}
+          ${detalhesHtml}
         </div>
       </div>
     `;
@@ -372,10 +451,12 @@ function printKitchen(orderId) {
           width: 30px;
         }
         .item-obs { 
-          font-style: italic; 
           margin-left: 40px; 
-          margin-top: 3px;
-          color: #333;
+          margin-top: 4px;
+          padding-left: 8px;
+          border-left: 2px solid #333;
+          padding: 3px 0 3px 8px;
+          line-height: 1.5;
         }
         .footer { 
           text-align: center; 
@@ -422,16 +503,53 @@ function printKitchen(orderId) {
       const obs = item.observacao || "";
       const adicionais = item.adicionais || [];
       const retiradas = item.retiradas || [];
+      const ponto = item.ponto || "";
 
       printContent += `
         <div class="item">
           <span class="item-qty">${qty}x</span>
           <strong>${name}</strong>
-          ${obs ? `<div class="item-obs">📝 OBS: ${obs}</div>` : ""}
-          ${adicionais.length > 0 ? `<div class="item-obs">➕ ADICIONAR: ${adicionais.join(", ")}</div>` : ""}
-          ${retiradas.length > 0 ? `<div class="item-obs">➖ SEM: ${retiradas.join(", ")}</div>` : ""}
-        </div>
       `;
+
+      // Parse da observação se existir
+      if (obs) {
+        const parsedDetails = parseObservationDetails(obs);
+
+        if (parsedDetails.length > 0) {
+          parsedDetails.forEach((detail) => {
+            let prefix = "";
+
+            if (detail.type === "name") {
+              prefix = "📝";
+            } else if (detail.type === "ponto") {
+              prefix = "🔥";
+            } else if (detail.type === "retiradas") {
+              prefix = "➖";
+            } else if (detail.type === "adicionais") {
+              prefix = "➕";
+            }
+
+            printContent += `<div class="item-obs">${prefix} ${detail.text}</div>`;
+          });
+        } else {
+          printContent += `<div class="item-obs">📝 ${obs}</div>`;
+        }
+      }
+
+      // Campos separados (se não vier como observação)
+      if (ponto && !obs) {
+        printContent += `<div class="item-obs">🔥 Ponto: ${ponto}</div>`;
+      }
+
+      if (retiradas.length > 0 && !obs) {
+        printContent += `<div class="item-obs">➖ SEM: ${retiradas.join(", ")}</div>`;
+      }
+
+      if (adicionais.length > 0 && !obs) {
+        printContent += `<div class="item-obs">➕ ADICIONAR: ${adicionais.join(", ")}</div>`;
+      }
+
+      printContent += `</div>`;
     });
   }
 
@@ -512,10 +630,13 @@ function printCustomer(orderId) {
           margin: 5px 0;
         }
         .item-obs { 
-          font-style: italic; 
           margin-left: 15px; 
           font-size: 11px;
-          margin-top: 2px;
+          margin-top: 4px;
+          padding-left: 8px;
+          border-left: 2px solid #666;
+          padding: 3px 0 3px 8px;
+          line-height: 1.5;
         }
         .total-section { 
           border-top: 2px dashed #000; 
@@ -576,16 +697,52 @@ function printCustomer(orderId) {
       const obs = item.observacao || "";
       const adicionais = item.adicionais || [];
       const retiradas = item.retiradas || [];
+      const ponto = item.ponto || "";
 
       printContent += `
         <div class="item-line">
           <span>${qty}x ${name}</span>
           <span>${formatPrice(itemTotal)}</span>
         </div>
-        ${obs ? `<div class="item-obs">Obs: ${obs}</div>` : ""}
-        ${adicionais.length > 0 ? `<div class="item-obs">+ ${adicionais.join(", ")}</div>` : ""}
-        ${retiradas.length > 0 ? `<div class="item-obs">- ${retiradas.join(", ")}</div>` : ""}
       `;
+
+      // Parse da observação se existir
+      if (obs) {
+        const parsedDetails = parseObservationDetails(obs);
+
+        if (parsedDetails.length > 0) {
+          parsedDetails.forEach((detail) => {
+            let prefix = "";
+
+            if (detail.type === "name") {
+              prefix = "📝";
+            } else if (detail.type === "ponto") {
+              prefix = "🔥";
+            } else if (detail.type === "retiradas") {
+              prefix = "➖";
+            } else if (detail.type === "adicionais") {
+              prefix = "➕";
+            }
+
+            printContent += `<div class="item-obs">${prefix} ${detail.text}</div>`;
+          });
+        } else {
+          printContent += `<div class="item-obs">📝 ${obs}</div>`;
+        }
+      }
+
+      // Campos separados (se não vier como observação)
+      if (ponto && !obs) {
+        printContent += `<div class="item-obs">🔥 Ponto: ${ponto}</div>`;
+      }
+
+      if (retiradas.length > 0 && !obs) {
+        printContent += `<div class="item-obs">➖ ${retiradas.join(", ")}</div>`;
+      }
+
+      if (adicionais.length > 0 && !obs) {
+        printContent += `<div class="item-obs">➕ ${adicionais.join(", ")}</div>`;
+      }
     });
   }
 

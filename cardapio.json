@@ -21,11 +21,26 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -42,11 +57,26 @@
         "Molho artesanal"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -68,11 +98,26 @@
         "Molho artesanal"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -96,11 +141,26 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -119,11 +179,26 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -147,15 +222,29 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     }
   ],
-
   "Clones": [
     {
       "nome": "Clone (2 Cremosos)",
@@ -174,11 +263,26 @@
         "Molho da casa"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -197,11 +301,26 @@
         "Molho"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -220,11 +339,26 @@
         "Molho"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -243,11 +377,26 @@
         "Molho"
       ],
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     }
   ],
@@ -269,24 +418,63 @@
       ],
       "upgrades": {
         "batata": [
-          { "nome": "Batata P (Inclusa)", "adicional": 0 },
-          { "nome": "Mudar para Batata M", "adicional": 3 },
-          { "nome": "Mudar para Batata G (Apenas batata)", "adicional": 5 }
+          {
+            "nome": "Batata P (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Mudar para Batata M",
+            "adicional": 3
+          },
+          {
+            "nome": "Mudar para Batata G (Apenas batata)",
+            "adicional": 5
+          }
         ],
         "bebida": [
-          { "nome": "Antártica Lata (Inclusa)", "adicional": 0 },
-          { "nome": "Trocar por Coca Lata", "adicional": 1 },
-          { "nome": "Trocar por Coca Lata Zero", "adicional": 1 },
-          { "nome": "Trocar por Antártica 1L", "adicional": 2 },
-          { "nome": "Trocar por Milk Morango 300Ml", "adicional": 6 }
+          {
+            "nome": "Antártica Lata (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Trocar por Coca Lata",
+            "adicional": 1
+          },
+          {
+            "nome": "Trocar por Coca Lata Zero",
+            "adicional": 1
+          },
+          {
+            "nome": "Trocar por Antártica 1L",
+            "adicional": 2
+          },
+          {
+            "nome": "Trocar por Milk Morango 300Ml",
+            "adicional": 6
+          }
         ]
       },
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -306,23 +494,59 @@
       "img": "./img/combo2.png",
       "upgrades": {
         "batata": [
-          { "nome": "Batata M (Inclusa)", "adicional": 0 },
-          { "nome": "Trocar por Batata P", "adicional": -2 },
-          { "nome": "Mudar para Batata G", "adicional": 2 }
+          {
+            "nome": "Batata M (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Trocar por Batata P",
+            "adicional": -2
+          },
+          {
+            "nome": "Mudar para Batata G",
+            "adicional": 2
+          }
         ],
         "bebida": [
-          { "nome": "Antártica Lata (Inclusa)", "adicional": 0 },
-          { "nome": "Trocar por Coca Lata", "adicional": 1 },
-          { "nome": "Trocar por Coca Lata Zero", "adicional": 1 },
-          { "nome": "Trocar por Antártica 1L", "adicional": 2 }
+          {
+            "nome": "Antártica Lata (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Trocar por Coca Lata",
+            "adicional": 1
+          },
+          {
+            "nome": "Trocar por Coca Lata Zero",
+            "adicional": 1
+          },
+          {
+            "nome": "Trocar por Antártica 1L",
+            "adicional": 2
+          }
         ]
       },
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     },
     {
@@ -342,21 +566,51 @@
       "img": "./img/combo3.png",
       "upgrades": {
         "batata": [
-          { "nome": "Batata G (Inclusa)", "adicional": 0 },
-          { "nome": "Trocar por Batata M", "adicional": -3 },
-          { "nome": "Trocar por Batata P", "adicional": -5 }
+          {
+            "nome": "Batata G (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Trocar por Batata M",
+            "adicional": -3
+          },
+          {
+            "nome": "Trocar por Batata P",
+            "adicional": -5
+          }
         ],
         "bebida": [
-          { "nome": "Antártica 1L (Inclusa)", "adicional": 0 },
-          { "nome": "Trocar por Coca 1L", "adicional": 2 }
+          {
+            "nome": "Antártica 1L (Inclusa)",
+            "adicional": 0
+          },
+          {
+            "nome": "Trocar por Coca 1L",
+            "adicional": 2
+          }
         ]
       },
       "paidExtras": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne Smash", "preco": 5 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne Smash",
+          "preco": 5
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ]
     }
   ],
@@ -374,13 +628,29 @@
         "Cheddar fatiado"
       ],
       "adicionais": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne", "preco": 5 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne",
+          "preco": 5
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ],
-      "img": "./img/rtriplo.jpg"
+      "img": "./img/rtriplo.jpg",
+      "pontoCarne": ["Mal passado", "Ao ponto", "Bem passado"]
     },
     {
       "nome": "Smash",
@@ -403,13 +673,29 @@
         "Triplo Bacon": ["Cheddar", "Alface", "Bacon", "Molho artesanal"]
       },
       "adicionais": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne", "preco": 5 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne",
+          "preco": 5
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ],
-      "img": "./img/3sms.jpg"
+      "img": "./img/3sms.jpg",
+      "pontoCarne": ["Mal passado", "Ao ponto", "Bem passado"]
     },
     {
       "nome": "Cremoso",
@@ -425,13 +711,29 @@
         "Cebola caramelizada"
       ],
       "adicionais": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne", "preco": 5 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne",
+          "preco": 5
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ],
-      "img": "./img/cremoso.png"
+      "img": "./img/cremoso.png",
+      "pontoCarne": ["Mal passado", "Ao ponto", "Bem passado"]
     },
     {
       "nome": "Calabreso",
@@ -447,12 +749,25 @@
         "Calabresa"
       ],
       "adicionais": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne", "preco": 5 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Ovo", "preco": 2 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne",
+          "preco": 5
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        }
       ],
-      "img": "./img/calabreso2.png"
+      "img": "./img/calabreso2.png",
+      "pontoCarne": ["Mal passado", "Ao ponto", "Bem passado"]
     },
     {
       "nome": "Eggy",
@@ -467,13 +782,29 @@
         "Cebola caramelizada"
       ],
       "adicionais": [
-        { "nome": "Bacon", "preco": 4 },
-        { "nome": "Carne", "preco": 5 },
-        { "nome": "Cream Cheese", "preco": 3 },
-        { "nome": "Ovo", "preco": 2 },
-        { "nome": "Calabresa", "preco": 3 }
+        {
+          "nome": "Bacon",
+          "preco": 4
+        },
+        {
+          "nome": "Carne",
+          "preco": 5
+        },
+        {
+          "nome": "Cream Cheese",
+          "preco": 3
+        },
+        {
+          "nome": "Ovo",
+          "preco": 2
+        },
+        {
+          "nome": "Calabresa",
+          "preco": 3
+        }
       ],
-      "img": "./img/eggy.jpg"
+      "img": "./img/eggy.jpg",
+      "pontoCarne": ["Mal passado", "Ao ponto", "Bem passado"]
     }
   ],
   "Batata Frita": [
@@ -483,8 +814,14 @@
       "precoBase": [10, 13, 16],
       "img": "./img/batatap.png",
       "adicionais": [
-        { "nome": "Bacon", "preco": 2 },
-        { "nome": "Cheddar", "preco": 2 }
+        {
+          "nome": "Bacon",
+          "preco": 2
+        },
+        {
+          "nome": "Cheddar",
+          "preco": 2
+        }
       ]
     }
   ],

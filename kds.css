@@ -324,6 +324,22 @@ button {
   font-style: italic;
 }
 
+.item-obs-line {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  margin-left: 0;
+  padding-left: 8px;
+  line-height: 1.6;
+  display: block;
+  border-left: 2px solid var(--border);
+  padding: 4px 0 4px 12px;
+}
+
+.item-obs-line:first-of-type {
+  margin-top: 8px;
+}
+
 .order-details {
   margin-top: 12px;
   padding-top: 12px;

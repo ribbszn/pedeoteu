@@ -180,8 +180,8 @@ header {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: var(--spacing-lg);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
 }
 
 /* ================================
@@ -189,11 +189,11 @@ header {
    ================================ */
 .card {
   display: flex;
+  flex-direction: column; /* Altera de horizontal para vertical */
   background: var(--card-bg);
   border-radius: var(--border-radius);
   border: 1px solid var(--border);
   overflow: hidden;
-  min-height: 140px;
   transition: var(--transition);
 }
 
@@ -203,17 +203,16 @@ header {
 }
 
 .card img {
-  width: 200px;
-  height: 100%;
-  object-fit: cover;
+  width: 100%; /* Ocupa toda a largura do card */
+  height: 200px; /* Defina uma altura fixa para manter o padrão */
+  object-fit: cover; /* Mantém a proporção da imagem sem distorcer */
 }
 
 .info {
-  flex: 1;
   padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: var(--spacing-sm); /* Adiciona um espaço padrão entre os itens */
 }
 
 .info h3 {
