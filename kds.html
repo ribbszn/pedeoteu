@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KDS - Ribbs ZN</title>
+    <link rel="stylesheet" href="kds.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="kds-header">
+      <div class="header-left">
+        <h1>🔥 RIBBS ZN - KDS</h1>
+        <div class="status-indicator">
+          <span class="status-dot" id="firebase-status"></span>
+          <span id="status-text">Conectando...</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="header-btn" id="btn-menu-management">
+          <span>📋</span>
+          <span>Gestão Cardápio</span>
+        </button>
+        <button class="header-btn" id="btn-history">
+          <span>📜</span>
+          <span>Histórico</span>
+        </button>
+        <button class="header-btn sound-toggle" id="btn-sound">
+          <span>🔔</span>
+          <span id="sound-status">Som: ON</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="kds-main">
+      <!-- Mesas/Totem -->
+      <section class="order-column">
+        <div class="column-header mesas">
+          <h2>🪑 Mesas / Totem</h2>
+          <span class="order-count" id="mesas-count">0</span>
+        </div>
+        <div class="orders-container" id="mesas-container">
+          <div class="empty-state">
+            <p>Nenhum pedido de mesa/totem no momento</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Delivery -->
+      <section class="order-column">
+        <div class="column-header delivery">
+          <h2>🛵 Delivery</h2>
+          <span class="order-count" id="delivery-count">0</span>
+        </div>
+        <div class="orders-container" id="delivery-container">
+          <div class="empty-state">
+            <p>Nenhum pedido de delivery no momento</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Sidebar Histórico -->
+    <aside class="sidebar" id="history-sidebar">
+      <div class="sidebar-header">
+        <h2>📜 Histórico de Pedidos</h2>
+        <button class="btn-close" id="close-history">&times;</button>
+      </div>
+
+      <div class="history-filters">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="today">Hoje</button>
+        <button class="filter-btn" data-filter="week">Semana</button>
+      </div>
+
+      <div class="sidebar-content" id="history-content">
+        <div class="empty-state">
+          <p>Nenhum pedido finalizado ainda</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Modal Gestão de Cardápio -->
+    <div class="modal" id="menu-modal">
+      <div class="modal-content menu-management">
+        <div class="modal-header">
+          <h2>📋 Gestão de Cardápio</h2>
+          <button class="btn-close" id="close-menu-modal">&times;</button>
+        </div>
+
+        <div class="menu-search">
+          <input
+            type="text"
+            id="menu-search-input"
+            placeholder="Buscar item no cardápio..."
+          />
+        </div>
+
+        <div class="menu-stats">
+          <div class="stat-card">
+            <span class="stat-label">Disponíveis</span>
+            <span class="stat-value available" id="available-count">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Indisponíveis</span>
+            <span class="stat-value unavailable" id="unavailable-count">0</span>
+          </div>
+        </div>
+
+        <div class="menu-categories" id="menu-categories">
+          <!-- Categorias serão carregadas aqui -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Detalhes do Pedido -->
+    <div class="modal" id="order-detail-modal">
+      <div class="modal-content order-detail">
+        <div class="modal-header">
+          <h2>Detalhes do Pedido</h2>
+          <button class="btn-close" id="close-order-detail">&times;</button>
+        </div>
+
+        <div class="modal-body" id="order-detail-content">
+          <!-- Conteúdo será carregado dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Audio para notificação -->
+    <audio id="notification-sound" preload="auto">
+      <source
+        src="data:audio/wav;base64,UklGRhwCAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YfgBAAD/////AAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA/////wAAAAD//////////wAAAAD/////AAAA//////////8AAAAA/////wAAAAD//////////wAAAAD/////AAAA/v7+/v7+/v7+/v7+/v7+/v7+/v7+/g=="
+        type="audio/wav"
+      />
+    </audio>
+
+    <!-- Audio para beep de pedido pendente -->
+    <audio id="beep-sound" preload="auto" loop>
+      <source src="beep.mp3" type="audio/mpeg" />
+    </audio>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <!-- KDS Script -->
+    <script src="kds.js"></script>
+  </body>
+</html>
