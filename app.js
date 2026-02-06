@@ -219,6 +219,75 @@ const MenuService = {
       }
     });
   },
+
+  // ================================
+  // PRICE SYNC FROM FIREBASE - NEW ADDITION
+  // ================================
+  listenToPriceChanges() {
+    if (!database) return;
+
+    database.ref("cardapio").on("value", (snapshot) => {
+      const firebaseMenu = snapshot.val();
+      if (!firebaseMenu || !AppState.cardapioData) return;
+
+      let pricesUpdated = false;
+
+      // Atualizar preços do cardápio local com os preços do Firebase
+      Object.entries(firebaseMenu).forEach(([category, items]) => {
+        if (AppState.cardapioData[category]) {
+          items.forEach((firebaseItem, index) => {
+            const localItem = AppState.cardapioData[category][index];
+            if (localItem && firebaseItem.precoBase !== undefined) {
+              // Verificar se o preço realmente mudou
+              const oldPrice = JSON.stringify(localItem.precoBase);
+              const newPrice = JSON.stringify(firebaseItem.precoBase);
+
+              if (oldPrice !== newPrice) {
+                localItem.precoBase = firebaseItem.precoBase;
+                pricesUpdated = true;
+                console.log(
+                  `💰 Preço atualizado: ${localItem.nome} = ${Array.isArray(firebaseItem.precoBase) ? firebaseItem.precoBase.join(", ") : firebaseItem.precoBase}`,
+                );
+              }
+            }
+          });
+        }
+      });
+
+      // Re-renderizar o menu com os novos preços apenas se houve mudança
+      if (pricesUpdated && AppState.cardapioData) {
+        MenuUI.render(AppState.cardapioData);
+        showToast("💰 Preços atualizados!");
+      }
+    });
+  },
+
+  async syncPricesFromFirebase() {
+    if (!database) return;
+
+    try {
+      const snapshot = await database.ref("cardapio").once("value");
+      const firebaseMenu = snapshot.val();
+
+      if (!firebaseMenu || !AppState.cardapioData) return;
+
+      // Atualizar preços do cardápio local
+      Object.entries(firebaseMenu).forEach(([category, items]) => {
+        if (AppState.cardapioData[category]) {
+          items.forEach((firebaseItem, index) => {
+            const localItem = AppState.cardapioData[category][index];
+            if (localItem && firebaseItem.precoBase !== undefined) {
+              localItem.precoBase = firebaseItem.precoBase;
+            }
+          });
+        }
+      });
+
+      console.log("✅ Preços sincronizados do Firebase");
+    } catch (error) {
+      console.error("❌ Erro ao sincronizar preços:", error);
+    }
+  },
 };
 
 // ================================
@@ -1720,6 +1789,14 @@ const App = {
 
       // Iniciar listener de disponibilidade
       MenuService.listenToAvailability();
+
+      // Iniciar listener de mudanças de preço - NEW
+      MenuService.listenToPriceChanges();
+
+      // Sincronizar preços inicialmente do Firebase - NEW
+      await MenuService.syncPricesFromFirebase();
+
+      console.log("✅ Sistema de sincronização de preços ativado");
     } catch (error) {
       MenuUI.renderError();
     }

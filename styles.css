@@ -237,11 +237,11 @@ header {
   flex: 1;
   min-width: 80px;
   padding: 8px 5px;
-  background: #222;
-  color: white;
+  background: #ffc107;
+  color: black;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: bold;
   text-align: center;
 }
@@ -253,9 +253,9 @@ header {
 
 .price-tag {
   display: block;
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 0.7rem;
+  color: black;
+  font-weight: bolder;
+  font-size: 0.9rem;
   margin-top: 2px;
 }
 

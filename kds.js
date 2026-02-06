@@ -15,6 +15,132 @@ const CONFIG = {
 };
 
 // ================================
+// UTILITY FUNCTIONS
+// ================================
+// Função auxiliar para gerar estilos de impressão inline
+function getPrintStyles(type) {
+  const baseStyles = `
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    @page {
+      size: 58mm auto;
+      margin: 0;
+    }
+    
+    html, body {
+      width: 80mm;
+      margin: 0;
+      padding: 0;
+      font-family: "Courier New", monospace;
+      font-size: ${type === "kitchen" ? "14px" : "12px"};
+      color: #000;
+      background: #fff;
+    }
+    
+    body {
+      padding: 10px;
+      width: 100%;
+      max-width: 80mm;
+    }
+    
+    .header {
+      text-align: center;
+      border-bottom: 2px dashed #000;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      ${type === "kitchen" ? "font-weight: bold;" : ""}
+    }
+    
+    .logo {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .order-number {
+      font-size: ${type === "kitchen" ? "24px" : "20px"};
+      font-weight: bold;
+      margin: ${type === "kitchen" ? "10px 0" : "8px 0"};
+    }
+    
+    .section {
+      margin: ${type === "kitchen" ? "15px 0" : "12px 0"};
+      ${type === "kitchen" ? "border-bottom: 1px dashed #000;" : ""}
+      padding-bottom: 10px;
+      page-break-inside: avoid;
+    }
+    
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+    
+    .item {
+      margin: 8px 0;
+      padding-left: 10px;
+      page-break-inside: avoid;
+    }
+    
+    .item-qty {
+      font-weight: bold;
+      display: inline-block;
+      width: 30px;
+    }
+    
+    .item-line {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+    
+    .item-obs {
+      margin-left: ${type === "kitchen" ? "40px" : "15px"};
+      font-size: 11px;
+      margin-top: 4px;
+      padding-left: 8px;
+      border-left: 2px solid ${type === "kitchen" ? "#333" : "#666"};
+      padding: 3px 0 3px 8px;
+      line-height: 1.5;
+    }
+    
+    .total-section {
+      border-top: 2px dashed #000;
+      padding-top: 10px;
+      margin-top: 10px;
+      page-break-inside: avoid;
+    }
+    
+    .total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      font-size: ${type === "kitchen" ? "12px" : "11px"};
+      ${type === "customer" ? "border-top: 1px dashed #000; padding-top: 10px;" : ""}
+      page-break-inside: avoid;
+    }
+    
+    .print-section-divider {
+      margin: 8px 0;
+    }
+  `;
+
+  return baseStyles;
+}
+
+// ================================
 // STATE MANAGEMENT
 // ================================
 const State = {
@@ -236,56 +362,11 @@ function renderOrder(orderId, order, isNew = false) {
 
   // Atualizar contador
   updateOrderCount();
-
-  // Remover classe new-order após animação
-  if (isNew) {
-    setTimeout(() => {
-      orderCard.classList.remove("new-order");
-    }, 2000);
-  }
 }
 
-// ================================
-// PARSE OBSERVATION (quebrar observação em detalhes)
-// ================================
-function parseObservationDetails(obs) {
-  if (!obs) return [];
-
-  const details = [];
-
-  // Dividir por " | " para pegar cada parte
-  const parts = obs.split(" | ");
-
-  parts.forEach((part) => {
-    const trimmed = part.trim();
-
-    if (trimmed.includes("---")) {
-      // Nome do produto (ex: "--- Smash Simples ---")
-      details.push({ type: "name", text: trimmed });
-    } else if (trimmed.toLowerCase().startsWith("ponto:")) {
-      // Ponto da carne
-      details.push({ type: "ponto", text: trimmed });
-    } else if (trimmed.toLowerCase().startsWith("sem:")) {
-      // Retiradas
-      details.push({ type: "retiradas", text: trimmed });
-    } else if (trimmed.toLowerCase().startsWith("adicionais:")) {
-      // Adicionais
-      details.push({ type: "adicionais", text: trimmed });
-    } else if (trimmed) {
-      // Qualquer outra observação
-      details.push({ type: "other", text: trimmed });
-    }
-  });
-
-  return details;
-}
-
-// ================================
-// RENDER ORDER ITEMS
-// ================================
 function renderOrderItems(items) {
   if (!items || items.length === 0) {
-    return '<div class="order-item"><span class="item-name">Sem itens</span></div>';
+    return '<div class="empty-state">Nenhum item no pedido</div>';
   }
 
   return items
@@ -293,66 +374,103 @@ function renderOrderItems(items) {
       const qty = item.quantidade || item.qtd || 1;
       const name = item.nome || "Item";
       const obs = item.observacao || "";
-      const adicionais = item.adicionais || [];
-      const retiradas = item.retiradas || [];
-      const ponto = item.ponto || "";
 
-      // Construir detalhes do item em linhas separadas
-      let detalhesHtml = "";
+      let obsHtml = "";
 
-      // Se tem observação, tentar parsear ela primeiro
+      // Parse observation details if exists
       if (obs) {
-        const parsedDetails = parseObservationDetails(obs);
-
-        if (parsedDetails.length > 0) {
-          // Se conseguiu parsear, usar os detalhes parseados
-          parsedDetails.forEach((detail) => {
-            let icon = "📝";
-
-            if (detail.type === "name") {
-              icon = "📝";
-            } else if (detail.type === "ponto") {
-              icon = "🔥";
-            } else if (detail.type === "retiradas") {
-              icon = "➖";
-            } else if (detail.type === "adicionais") {
-              icon = "➕";
-            }
-
-            detalhesHtml += `<div class="item-obs-line">${icon} ${detail.text}</div>`;
-          });
+        const details = parseObservationDetails(obs);
+        if (details && details.length > 0) {
+          obsHtml = details
+            .map((detail) => `<div class="item-obs-line">${detail.text}</div>`)
+            .join("");
         } else {
-          // Se não conseguiu parsear, mostrar observação normal
-          detalhesHtml += `<div class="item-obs-line">📝 ${obs}</div>`;
+          obsHtml = `<div class="item-obs-line">${obs}</div>`;
         }
-      }
-
-      // Ponto da carne (se vier como campo separado)
-      if (ponto && !obs) {
-        detalhesHtml += `<div class="item-obs-line">🔥 Ponto: ${ponto}</div>`;
-      }
-
-      // Retiradas (se vier como array separado)
-      if (retiradas.length > 0 && !obs) {
-        detalhesHtml += `<div class="item-obs-line">➖ Sem: ${retiradas.join(", ")}</div>`;
-      }
-
-      // Adicionais (se vier como array separado)
-      if (adicionais.length > 0 && !obs) {
-        detalhesHtml += `<div class="item-obs-line">➕ Adicionais: ${adicionais.join(", ")}</div>`;
       }
 
       return `
       <div class="order-item">
         <span class="item-qty">${qty}x</span>
-        <div style="flex: 1;">
-          <span class="item-name">${name}</span>
-          ${detalhesHtml}
-        </div>
+        <span class="item-name">${name}</span>
       </div>
+      ${obsHtml}
     `;
     })
     .join("");
+}
+
+// Parse observation details
+function parseObservationDetails(obs) {
+  if (!obs) return [];
+
+  const details = [];
+  const lines = obs
+    .split(/\n|;/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  lines.forEach((line) => {
+    let type = "other";
+    let text = line;
+
+    if (line.match(/ponto|mal passad|ao ponto|bem passad/i)) {
+      type = "ponto";
+    } else if (line.match(/sem |retirar|tirar/i)) {
+      type = "retiradas";
+    } else if (line.match(/adicionar|add |com /i)) {
+      type = "adicionais";
+    } else if (line.match(/nome:|^\w+:/i)) {
+      type = "name";
+    }
+
+    details.push({ type, text });
+  });
+
+  return details;
+}
+
+function formatPrice(value) {
+  const num = parseFloat(value) || 0;
+  return `R$ ${num.toFixed(2).replace(".", ",")}`;
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// ================================
+// ACCEPT ORDER
+// ================================
+async function acceptOrder(orderId) {
+  if (!State.database) return;
+
+  try {
+    // Marcar como aceito no estado local
+    State.acceptedOrders[orderId] = true;
+
+    // Parar o beep
+    stopBeep(orderId);
+
+    // Re-renderizar o pedido
+    const order = State.orders[orderId];
+    if (order) {
+      renderOrder(orderId, order, false);
+    }
+
+    // Atualizar widget de pedidos em preparo
+    updateInProgressWidget();
+
+    showToast("✅ Pedido aceito e em preparo", "success");
+  } catch (error) {
+    console.error("Erro ao aceitar pedido:", error);
+    showToast("Erro ao aceitar pedido", "error");
+  }
 }
 
 // ================================
@@ -368,7 +486,7 @@ async function completeOrder(orderId) {
       completedTime: new Date().toLocaleString("pt-BR"),
     });
 
-    showToast("✅ Pedido finalizado!", "success");
+    showToast("✅ Pedido concluído", "success");
   } catch (error) {
     console.error("Erro ao finalizar pedido:", error);
     showToast("Erro ao finalizar pedido", "error");
@@ -376,28 +494,9 @@ async function completeOrder(orderId) {
 }
 
 // ================================
-// ACCEPT ORDER
+// PRINT KITCHEN - VERSÃO MELHORADA
 // ================================
-async function acceptOrder(orderId) {
-  // Parar o beep
-  stopBeep(orderId);
-
-  // Marcar como aceito
-  State.acceptedOrders[orderId] = true;
-
-  // Re-renderizar o pedido
-  const order = State.orders[orderId];
-  if (order) {
-    renderOrder(orderId, order, false);
-  }
-
-  showToast("✅ Pedido aceito!", "success");
-}
-
-// ================================
-// PRINT KITCHEN
-// ================================
-function printKitchen(orderId) {
+async function printKitchen(orderId) {
   const order = State.orders[orderId];
   if (!order) {
     showToast("Pedido não encontrado", "error");
@@ -410,62 +509,10 @@ function printKitchen(orderId) {
     <html>
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Pedido Cozinha - #${orderId.slice(-6).toUpperCase()}</title>
       <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: 'Courier New', monospace; 
-          padding: 20px; 
-          max-width: 300px;
-          font-size: 14px;
-        }
-        .header { 
-          text-align: center; 
-          border-bottom: 2px dashed #000; 
-          padding-bottom: 10px; 
-          margin-bottom: 15px;
-          font-weight: bold;
-        }
-        .order-number { 
-          font-size: 24px; 
-          font-weight: bold; 
-          margin: 10px 0;
-        }
-        .section { 
-          margin: 15px 0; 
-          border-bottom: 1px dashed #000; 
-          padding-bottom: 10px;
-        }
-        .section-title { 
-          font-weight: bold; 
-          margin-bottom: 8px; 
-          font-size: 16px;
-        }
-        .item { 
-          margin: 8px 0; 
-          padding-left: 10px;
-        }
-        .item-qty { 
-          font-weight: bold; 
-          display: inline-block; 
-          width: 30px;
-        }
-        .item-obs { 
-          margin-left: 40px; 
-          margin-top: 4px;
-          padding-left: 8px;
-          border-left: 2px solid #333;
-          padding: 3px 0 3px 8px;
-          line-height: 1.5;
-        }
-        .footer { 
-          text-align: center; 
-          margin-top: 20px; 
-          font-size: 12px;
-        }
-        @media print {
-          body { padding: 10px; }
-        }
+        ${getPrintStyles("kitchen")}
       </style>
     </head>
     <body>
@@ -558,13 +605,15 @@ function printKitchen(orderId) {
 
       <div class="footer">
         ═══════════════════════<br>
-        Pedido impresso: ${new Date().toLocaleString("pt-BR")}
+        ${new Date().toLocaleString("pt-BR")}
       </div>
 
       <script>
         window.onload = function() {
-          window.print();
-          setTimeout(() => window.close(), 100);
+          setTimeout(() => {
+            window.print();
+            setTimeout(() => window.close(), 500);
+          }, 250);
         };
       </script>
     </body>
@@ -573,16 +622,18 @@ function printKitchen(orderId) {
 
   // Abrir janela de impressão
   const printWindow = window.open("", "_blank", "width=350,height=600");
-  printWindow.document.write(printContent);
-  printWindow.document.close();
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
 
   showToast("🖨️ Imprimindo pedido para cozinha", "success");
 }
 
 // ================================
-// PRINT CUSTOMER
+// PRINT CUSTOMER - VERSÃO MELHORADA
 // ================================
-function printCustomer(orderId) {
+async function printCustomer(orderId) {
   const order = State.orders[orderId];
   if (!order) {
     showToast("Pedido não encontrado", "error");
@@ -595,71 +646,10 @@ function printCustomer(orderId) {
     <html>
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Comprovante - #${orderId.slice(-6).toUpperCase()}</title>
       <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: 'Courier New', monospace; 
-          padding: 20px; 
-          max-width: 300px;
-          font-size: 12px;
-        }
-        .header { 
-          text-align: center; 
-          border-bottom: 2px dashed #000; 
-          padding-bottom: 10px; 
-          margin-bottom: 15px;
-        }
-        .logo { 
-          font-size: 18px; 
-          font-weight: bold; 
-          margin-bottom: 5px;
-        }
-        .order-number { 
-          font-size: 20px; 
-          font-weight: bold; 
-          margin: 8px 0;
-        }
-        .section { 
-          margin: 12px 0; 
-          padding-bottom: 10px;
-        }
-        .item-line { 
-          display: flex; 
-          justify-content: space-between; 
-          margin: 5px 0;
-        }
-        .item-obs { 
-          margin-left: 15px; 
-          font-size: 11px;
-          margin-top: 4px;
-          padding-left: 8px;
-          border-left: 2px solid #666;
-          padding: 3px 0 3px 8px;
-          line-height: 1.5;
-        }
-        .total-section { 
-          border-top: 2px dashed #000; 
-          padding-top: 10px; 
-          margin-top: 10px;
-        }
-        .total { 
-          display: flex; 
-          justify-content: space-between; 
-          font-size: 16px; 
-          font-weight: bold; 
-          margin-top: 8px;
-        }
-        .footer { 
-          text-align: center; 
-          margin-top: 20px; 
-          font-size: 11px;
-          border-top: 1px dashed #000;
-          padding-top: 10px;
-        }
-        @media print {
-          body { padding: 10px; }
-        }
+        ${getPrintStyles("customer")}
       </style>
     </head>
     <body>
@@ -677,7 +667,7 @@ function printCustomer(orderId) {
       </div>
 
       <div class="section">
-        <div style="border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 8px;">
+        <div class="print-section-divider">
           <strong>ITENS</strong>
         </div>
   `;
@@ -759,16 +749,16 @@ function printCustomer(orderId) {
       </div>
 
       <div class="footer">
-        Obrigado pela preferência!<br>
-        Volte sempre! 😊<br>
         ═══════════════════════<br>
         ${new Date().toLocaleString("pt-BR")}
       </div>
 
       <script>
         window.onload = function() {
-          window.print();
-          setTimeout(() => window.close(), 100);
+          setTimeout(() => {
+            window.print();
+            setTimeout(() => window.close(), 500);
+          }, 250);
         };
       </script>
     </body>
@@ -777,8 +767,10 @@ function printCustomer(orderId) {
 
   // Abrir janela de impressão
   const printWindow = window.open("", "_blank", "width=350,height=600");
-  printWindow.document.write(printContent);
-  printWindow.document.close();
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
 
   showToast("🧾 Imprimindo comprovante para cliente", "success");
 }
@@ -849,7 +841,7 @@ function removeOrderFromKDS(orderId) {
 
   const orderCard = document.getElementById(`order-${orderId}`);
   if (orderCard) {
-    orderCard.style.animation = "fadeOut 0.3s ease";
+    orderCard.classList.add("fade-out-animation");
     setTimeout(() => {
       orderCard.remove();
       delete State.orders[orderId];
@@ -1038,7 +1030,7 @@ function renderMenuManagement() {
   const html = Object.entries(State.menuData)
     .map(([category, items]) => {
       const itemsHtml = items
-        .map((item) => {
+        .map((item, itemIndex) => {
           const itemKey = `${category}-${item.nome}`;
           const isAvailable = State.menuAvailability[itemKey] !== false;
 
@@ -1046,6 +1038,84 @@ function renderMenuManagement() {
             availableCount++;
           } else {
             unavailableCount++;
+          }
+
+          // Gerar campos de preço editáveis
+          let priceEditorHtml = "";
+
+          if (item.precoBase) {
+            if (Array.isArray(item.precoBase)) {
+              // Múltiplos preços (ex: Simples, Duplo, Triplo)
+              const opcoes = item.opcoes || [];
+              priceEditorHtml = item.precoBase
+                .map((price, priceIndex) => {
+                  const optionName =
+                    opcoes[priceIndex] || `Opção ${priceIndex + 1}`;
+                  const inputId = `price-${category}-${itemIndex}-${priceIndex}`;
+                  return `
+                    <div class="menu-item-price-editor">
+                      <strong class="price-label">${optionName}:</strong>
+                      <div class="price-input-wrapper">
+                        <span class="price-currency">R$</span>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          class="price-input" 
+                          id="${inputId}"
+                          value="${price.toFixed(2)}"
+                          data-category="${category}"
+                          data-item-name="${item.nome}"
+                          data-price-index="${priceIndex}"
+                          data-original-value="${price.toFixed(2)}"
+                          onchange="handlePriceChange(this)"
+                        />
+                      </div>
+                      <button 
+                        class="btn-save-price" 
+                        id="save-${inputId}"
+                        onclick="savePriceChange('${category}', '${item.nome}', ${priceIndex}, '${inputId}')"
+                      >
+                        💾 Salvar
+                      </button>
+                      <span class="price-save-indicator" id="indicator-${inputId}">✓</span>
+                    </div>
+                  `;
+                })
+                .join("");
+            } else {
+              // Preço único
+              const inputId = `price-${category}-${itemIndex}-0`;
+              priceEditorHtml = `
+                <div class="menu-item-price-editor">
+                  <strong class="price-label-short">Preço:</strong>
+                  <div class="price-input-wrapper">
+                    <span class="price-currency">R$</span>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0" 
+                      class="price-input" 
+                      id="${inputId}"
+                      value="${item.precoBase.toFixed(2)}"
+                      data-category="${category}"
+                      data-item-name="${item.nome}"
+                      data-price-index="0"
+                      data-original-value="${item.precoBase.toFixed(2)}"
+                      onchange="handlePriceChange(this)"
+                    />
+                  </div>
+                  <button 
+                    class="btn-save-price" 
+                    id="save-${inputId}"
+                    onclick="savePriceChange('${category}', '${item.nome}', null, '${inputId}')"
+                  >
+                    💾 Salvar
+                  </button>
+                  <span class="price-save-indicator" id="indicator-${inputId}">✓</span>
+                </div>
+              `;
+            }
           }
 
           const priceText = item.precoBase
@@ -1056,13 +1126,18 @@ function renderMenuManagement() {
 
           return `
         <div class="menu-item ${isAvailable ? "" : "unavailable"}">
-          <div class="menu-item-info">
-            <div class="menu-item-name">${item.nome}</div>
-            <div class="menu-item-price">${priceText}</div>
+          <div class="menu-item-header">
+            <div class="menu-item-info">
+              <div class="menu-item-name">${item.nome}</div>
+              <div class="menu-item-price">${priceText}</div>
+            </div>
+            <div class="menu-item-controls">
+              <div class="menu-item-toggle ${isAvailable ? "available" : ""}" 
+                   onclick="toggleMenuItem('${category}', '${item.nome}')">
+              </div>
+            </div>
           </div>
-          <div class="menu-item-toggle ${isAvailable ? "available" : ""}" 
-               onclick="toggleMenuItem('${category}', '${item.nome}')">
-          </div>
+          ${priceEditorHtml}
         </div>
       `;
         })
@@ -1110,103 +1185,355 @@ async function toggleMenuItem(category, itemName) {
 function toggleCategory(element) {
   element.classList.toggle("active");
   const items = element.nextElementSibling;
-  items.classList.toggle("active");
+  items.style.display = items.style.display === "none" ? "block" : "none";
+}
+
+function handlePriceChange(input) {
+  const saveButton = document.getElementById(`save-${input.id}`);
+  const indicator = document.getElementById(`indicator-${input.id}`);
+
+  if (saveButton && indicator) {
+    const hasChanged =
+      parseFloat(input.value) !== parseFloat(input.dataset.originalValue);
+    saveButton.style.display = hasChanged ? "inline-block" : "none";
+    indicator.style.display = hasChanged ? "none" : "inline";
+  }
+}
+
+async function savePriceChange(category, itemName, priceIndex, inputId) {
+  const input = document.getElementById(inputId);
+  const saveButton = document.getElementById(`save-${inputId}`);
+  const indicator = document.getElementById(`indicator-${inputId}`);
+
+  if (!input || !State.menuData || !State.database) {
+    showToast("❌ Erro: dados não encontrados", "error");
+    return;
+  }
+
+  const newPrice = parseFloat(input.value);
+
+  if (isNaN(newPrice) || newPrice < 0) {
+    showToast("❌ Preço inválido!", "error");
+    return;
+  }
+
+  // Desabilitar botão e mostrar loading
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = "⏳ Salvando...";
+  }
+
+  try {
+    // Encontrar o item no State.menuData
+    const categoryItems = State.menuData[category];
+    if (!categoryItems) {
+      throw new Error("Categoria não encontrada");
+    }
+
+    const item = categoryItems.find((i) => i.nome === itemName);
+    if (!item) {
+      throw new Error("Item não encontrado");
+    }
+
+    // Atualizar preço localmente primeiro
+    if (priceIndex !== null && Array.isArray(item.precoBase)) {
+      item.precoBase[priceIndex] = newPrice;
+    } else {
+      item.precoBase = newPrice;
+    }
+
+    // Salvar no Firebase
+    const itemPath = `cardapio/${category}`;
+    const updatedItems = categoryItems;
+
+    await State.database.ref(itemPath).set(updatedItems);
+
+    // Atualizar valor original
+    input.dataset.originalValue = newPrice.toFixed(2);
+
+    // Mostrar indicador de sucesso
+    if (saveButton && indicator) {
+      saveButton.style.display = "none";
+      indicator.style.display = "inline";
+    }
+
+    // Atualizar renderização
+    renderMenuManagement();
+
+    showToast(`💰 Preço de "${itemName}" atualizado com sucesso!`, "success");
+  } catch (error) {
+    console.error("Erro ao salvar preço:", error);
+    showToast(`❌ Erro ao salvar preço: ${error.message}`, "error");
+
+    // Reabilitar botão em caso de erro
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = "💾 Salvar";
+    }
+  }
 }
 
 // ================================
-// SEARCH MENU
+// IN-PROGRESS WIDGET
 // ================================
-function setupMenuSearch() {
-  const searchInput = document.getElementById("menu-search-input");
 
-  searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase();
-    const menuItems = document.querySelectorAll(".menu-item");
-    const categories = document.querySelectorAll(".menu-category");
+// Inicializar widget
+function initInProgressWidget() {
+  console.log("🔧 Inicializando widget Em Preparo...");
 
-    categories.forEach((category) => {
-      const categoryItems = category.querySelectorAll(".menu-item");
-      let hasVisibleItems = false;
+  const header = document.getElementById("in-progress-header");
+  const dropdown = document.getElementById("in-progress-dropdown");
 
-      categoryItems.forEach((item) => {
-        const itemName = item
-          .querySelector(".menu-item-name")
-          .textContent.toLowerCase();
-        if (itemName.includes(query)) {
-          item.style.display = "flex";
-          hasVisibleItems = true;
-        } else {
-          item.style.display = "none";
-        }
-      });
+  if (!header || !dropdown) {
+    console.error("❌ Elementos do widget não encontrados");
+    return;
+  }
 
-      category.style.display = hasVisibleItems ? "block" : "none";
-
-      // Expandir categorias com resultados
-      if (hasVisibleItems && query) {
-        const header = category.querySelector(".category-header-menu");
-        const items = category.querySelector(".category-items");
-        header.classList.add("active");
-        items.classList.add("active");
-      }
-    });
+  header.addEventListener("click", function () {
+    header.classList.toggle("expanded");
+    dropdown.classList.toggle("show");
+    console.log("📂 Widget expandido:", dropdown.classList.contains("show"));
   });
+
+  // Atualizar widget inicial
+  updateInProgressWidget();
+  console.log("✅ Widget Em Preparo inicializado");
 }
 
-// ================================
-// UI HELPERS
-// ================================
-function openHistorySidebar() {
-  document.getElementById("history-sidebar").classList.add("active");
-  document.getElementById("overlay").classList.add("active");
-  loadHistoryFromFirebase();
-}
+// Atualizar lista de pedidos em preparo
+function updateInProgressWidget() {
+  const countElement = document.getElementById("in-progress-count");
+  const listElement = document.getElementById("in-progress-list");
 
-function closeHistorySidebar() {
-  document.getElementById("history-sidebar").classList.remove("active");
-  document.getElementById("overlay").classList.remove("active");
-}
-
-function openMenuModal() {
-  document.getElementById("menu-modal").classList.add("active");
-  document.getElementById("overlay").classList.add("active");
-  if (!State.menuData) {
-    loadMenuData();
+  if (!countElement || !listElement) {
+    console.warn("⚠️ Elementos do widget não encontrados");
+    return;
   }
-}
 
-function closeMenuModal() {
-  document.getElementById("menu-modal").classList.remove("active");
-  document.getElementById("overlay").classList.remove("active");
-}
+  // Filtrar pedidos em preparo
+  const inProgressOrders = Object.entries(State.orders)
+    .filter(([id, order]) => {
+      const isAccepted = State.acceptedOrders[id] === true;
+      const isPending = order.status === "pending";
+      return isAccepted && isPending;
+    })
+    .map(([id, order]) => ({ id, ...order }));
 
-function toggleSound() {
-  State.soundEnabled = !State.soundEnabled;
-  const soundStatus = document.getElementById("sound-status");
-  soundStatus.textContent = State.soundEnabled ? "Som: ON" : "Som: OFF";
+  console.log(
+    `📊 Pedidos em preparo: ${inProgressOrders.length}`,
+    inProgressOrders,
+  );
 
-  if (State.soundEnabled) {
-    showToast("🔔 Som ativado", "success");
+  // Atualizar contador
+  countElement.textContent = inProgressOrders.length;
+
+  // Renderizar lista
+  if (inProgressOrders.length === 0) {
+    listElement.innerHTML = `
+      <div class="empty-state-inline">
+        <p>Nenhum pedido em preparo</p>
+      </div>
+    `;
   } else {
-    showToast("🔕 Som desativado", "warning");
+    // Ordenar por timestamp (mais antigo primeiro)
+    inProgressOrders.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    listElement.innerHTML = inProgressOrders
+      .map((order) => renderInProgressOrder(order))
+      .join("");
   }
 }
 
+// Renderizar pedido individual
+function renderInProgressOrder(order) {
+  const orderNumber = order.numeroPedido || order.id.substring(0, 8);
+  const customer = order.cliente || order.nomeCliente || "Cliente";
+  const time = order.timestamp ? formatTime(order.timestamp) : "";
+  const items = order.itens || order.items || [];
+
+  const itemsHTML = items
+    .map((item) => {
+      const qty = item.quantidade || item.qtd || 1;
+      const name = item.nome || "Item";
+      const obs = item.observacao || "";
+      const adicionais = item.adicionais || [];
+      const retiradas = item.retiradas || [];
+      const ponto = item.ponto || "";
+
+      // Verificar se tem modificações
+      const hasMods =
+        obs || adicionais.length > 0 || retiradas.length > 0 || ponto;
+      const modClass = hasMods ? "has-mods" : "";
+
+      // Construir HTML de modificações
+      let modsHTML = "";
+      if (hasMods) {
+        const modsParts = [];
+
+        // Ponto da carne
+        if (ponto) {
+          modsParts.push(
+            `<div class="in-progress-mod in-progress-mod-obs">Ponto: ${ponto}</div>`,
+          );
+        }
+
+        // Retiradas
+        if (retiradas.length > 0) {
+          retiradas.forEach((ret) => {
+            const retName = typeof ret === "string" ? ret : ret.nome || ret;
+            modsParts.push(
+              `<div class="in-progress-mod in-progress-mod-remove">Sem ${retName}</div>`,
+            );
+          });
+        }
+
+        // Adicionais
+        if (adicionais.length > 0) {
+          adicionais.forEach((add) => {
+            const addName = typeof add === "string" ? add : add.nome || add;
+            modsParts.push(
+              `<div class="in-progress-mod in-progress-mod-add">+ ${addName}</div>`,
+            );
+          });
+        }
+
+        // Observações do texto
+        if (obs) {
+          try {
+            const details = parseObservationDetails(obs);
+            details.forEach((detail) => {
+              if (detail.type === "retiradas" && retiradas.length === 0) {
+                modsParts.push(
+                  `<div class="in-progress-mod in-progress-mod-remove">${detail.text}</div>`,
+                );
+              } else if (
+                detail.type === "adicionais" &&
+                adicionais.length === 0
+              ) {
+                modsParts.push(
+                  `<div class="in-progress-mod in-progress-mod-add">${detail.text}</div>`,
+                );
+              } else if (detail.type === "ponto" && !ponto) {
+                modsParts.push(
+                  `<div class="in-progress-mod in-progress-mod-obs">${detail.text}</div>`,
+                );
+              } else if (detail.type === "other") {
+                modsParts.push(
+                  `<div class="in-progress-mod in-progress-mod-obs">${detail.text}</div>`,
+                );
+              }
+            });
+          } catch (e) {
+            // Se parseObservationDetails não existir ou falhar, mostrar obs como está
+            modsParts.push(
+              `<div class="in-progress-mod in-progress-mod-obs">${obs}</div>`,
+            );
+          }
+        }
+
+        if (modsParts.length > 0) {
+          modsHTML = `<div class="in-progress-item-mods">${modsParts.join("")}</div>`;
+        }
+      }
+
+      return `
+      <div class="in-progress-item ${modClass}">
+        <span class="in-progress-item-qty">${qty}x</span>
+        <span class="in-progress-item-name">${name}</span>
+        ${modsHTML}
+      </div>
+    `;
+    })
+    .join("");
+
+  return `
+    <div class="in-progress-order">
+      <div class="in-progress-order-header">
+        <span class="in-progress-order-number">#${orderNumber}</span>
+        <span class="in-progress-order-time">${time}</span>
+      </div>
+      <div class="in-progress-order-customer">${customer}</div>
+      <div class="in-progress-order-items">
+        ${itemsHTML}
+      </div>
+    </div>
+  `;
+}
+
+// Sobrescrever funções originais para atualizar widget
+(function () {
+  // Guardar referências originais
+  const _acceptOrder = window.acceptOrder;
+  const _completeOrder = window.completeOrder;
+  const _cancelOrder = window.cancelOrder;
+
+  // Sobrescrever acceptOrder
+  window.acceptOrder = async function (orderId) {
+    console.log("✅ Aceitando pedido:", orderId);
+    await _acceptOrder.call(this, orderId);
+    setTimeout(() => {
+      updateInProgressWidget();
+    }, 200);
+  };
+
+  // Sobrescrever completeOrder
+  window.completeOrder = async function (orderId) {
+    console.log("🏁 Completando pedido:", orderId);
+    await _completeOrder.call(this, orderId);
+    setTimeout(() => {
+      updateInProgressWidget();
+    }, 200);
+  };
+
+  // Sobrescrever cancelOrder
+  window.cancelOrder = async function (orderId) {
+    console.log("❌ Cancelando pedido:", orderId);
+    await _cancelOrder.call(this, orderId);
+    setTimeout(() => {
+      updateInProgressWidget();
+    }, 200);
+  };
+
+  console.log("🔄 Funções de pedido sobrescritas com sucesso");
+})();
+
+// ================================
+// SOUND & NOTIFICATIONS
+// ================================
 function playNotificationSound() {
   if (!State.soundEnabled) return;
 
   const audio = document.getElementById("notification-sound");
-  audio.currentTime = 0;
-  audio.play().catch((error) => {
-    console.log("Não foi possível reproduzir som:", error);
-  });
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch((error) => {
+      console.log("Não foi possível reproduzir som:", error);
+    });
+  }
+}
+
+function toggleSound() {
+  State.soundEnabled = !State.soundEnabled;
+  const statusEl = document.getElementById("sound-status");
+  if (statusEl) {
+    statusEl.textContent = `Som: ${State.soundEnabled ? "ON" : "OFF"}`;
+  }
+
+  // Se desligou o som, parar todos os beeps
+  if (!State.soundEnabled) {
+    Object.keys(State.beepIntervals).forEach((orderId) => {
+      stopBeep(orderId);
+    });
+  }
 }
 
 // ================================
 // TOAST NOTIFICATIONS
 // ================================
-function showToast(message, type = "success") {
+function showToast(message, type = "info") {
   const container = document.getElementById("toast-container");
+  if (!container) return;
+
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
   toast.textContent = message;
@@ -1219,79 +1546,110 @@ function showToast(message, type = "success") {
 }
 
 // ================================
-// UTILITY FUNCTIONS
+// UI INITIALIZATION
 // ================================
-function formatPrice(value) {
-  return `R$ ${parseFloat(value).toFixed(2).replace(".", ",")}`;
-}
-
-// ================================
-// EVENT LISTENERS
-// ================================
-function setupEventListeners() {
-  // Header buttons
-  document
-    .getElementById("btn-history")
-    .addEventListener("click", openHistorySidebar);
-  document
-    .getElementById("btn-menu-management")
-    .addEventListener("click", openMenuModal);
-  document.getElementById("btn-sound").addEventListener("click", toggleSound);
-
-  // Close buttons
-  document
-    .getElementById("close-history")
-    .addEventListener("click", closeHistorySidebar);
-  document
-    .getElementById("close-menu-modal")
-    .addEventListener("click", closeMenuModal);
-  document
-    .getElementById("close-order-detail")
-    ?.addEventListener("click", () => {
-      document.getElementById("order-detail-modal").classList.remove("active");
-      document.getElementById("overlay").classList.remove("active");
+function initUI() {
+  // Botão de gestão de cardápio
+  const btnMenuManagement = document.getElementById("btn-menu-management");
+  if (btnMenuManagement) {
+    btnMenuManagement.addEventListener("click", () => {
+      const modal = document.getElementById("menu-modal");
+      const overlay = document.getElementById("overlay");
+      if (modal && overlay) {
+        modal.classList.add("show");
+        overlay.classList.add("show");
+        loadMenuData();
+      }
     });
+  }
 
-  // Overlay
-  document.getElementById("overlay").addEventListener("click", () => {
-    closeHistorySidebar();
-    closeMenuModal();
+  // Botão de histórico
+  const btnHistory = document.getElementById("btn-history");
+  if (btnHistory) {
+    btnHistory.addEventListener("click", () => {
+      const sidebar = document.getElementById("history-sidebar");
+      const overlay = document.getElementById("overlay");
+      if (sidebar && overlay) {
+        sidebar.classList.add("show");
+        overlay.classList.add("show");
+        loadHistoryFromFirebase();
+      }
+    });
+  }
+
+  // Botão de som
+  const btnSound = document.getElementById("btn-sound");
+  if (btnSound) {
+    btnSound.addEventListener("click", toggleSound);
+  }
+
+  // Fechar modais e sidebar
+  const closeButtons = document.querySelectorAll(".btn-close");
+  closeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".modal, .sidebar, .overlay").forEach((el) => {
+        el.classList.remove("show");
+      });
+    });
   });
 
-  // History filters
-  document.querySelectorAll(".filter-btn").forEach((btn) => {
+  // Overlay fecha modais e sidebar
+  const overlay = document.getElementById("overlay");
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      document.querySelectorAll(".modal, .sidebar, .overlay").forEach((el) => {
+        el.classList.remove("show");
+      });
+    });
+  }
+
+  // Filtros de histórico
+  const filterButtons = document.querySelectorAll(".filter-btn");
+  filterButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".filter-btn")
-        .forEach((b) => b.classList.remove("active"));
+      filterButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       State.activeFilter = btn.dataset.filter;
       renderHistory();
     });
   });
 
-  // Menu search
-  setupMenuSearch();
+  // Busca no cardápio
+  const searchInput = document.getElementById("menu-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase();
+      const items = document.querySelectorAll(".menu-item");
+
+      items.forEach((item) => {
+        const name = item
+          .querySelector(".menu-item-name")
+          ?.textContent.toLowerCase();
+        if (name && name.includes(query)) {
+          item.style.display = "";
+        } else {
+          item.style.display = "none";
+        }
+      });
+    });
+  }
 }
 
-// ================================
-// INITIALIZATION
-// ================================
-function init() {
-  console.log("🚀 Iniciando KDS...");
-  initFirebase();
-  setupEventListeners();
-  checkEmptyStates();
+// Inicializar quando DOM estiver pronto
+(function () {
+  function init() {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () {
+        initFirebase();
+        initUI();
+        setTimeout(initInProgressWidget, 1500);
+      });
+    } else {
+      initFirebase();
+      initUI();
+      setTimeout(initInProgressWidget, 1500);
+    }
+  }
 
-  // Carregar dados do menu
-  loadMenuData();
-
-  console.log("✅ KDS inicializado");
-}
-
-// Iniciar quando DOM estiver pronto
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
   init();
-}
+})();

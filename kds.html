@@ -17,6 +17,25 @@
         </div>
       </div>
 
+      <div class="header-center">
+        <div class="in-progress-widget" id="in-progress-widget">
+          <div class="in-progress-header" id="in-progress-header">
+            <span class="in-progress-icon">👨‍🍳</span>
+            <div class="in-progress-text">
+              <span class="in-progress-label">Em Preparo</span>
+              <span class="in-progress-count" id="in-progress-count">0</span>
+            </div>
+          </div>
+          <div class="in-progress-dropdown" id="in-progress-dropdown">
+            <div class="in-progress-list" id="in-progress-list">
+              <div class="empty-state-inline">
+                <p>Nenhum pedido em preparo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="header-right">
         <button class="header-btn" id="btn-menu-management">
           <span>📋</span>
@@ -144,7 +163,7 @@
     </audio>
 
     <!-- Audio para beep de pedido pendente -->
-    <audio id="beep-sound" preload="auto" loop>
+    <audio id="beep-sound" preload="auto" loop">
       <source src="beep.mp3" type="audio/mpeg" />
     </audio>
 
