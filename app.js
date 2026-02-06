@@ -49,6 +49,10 @@ const AppState = {
   deliveryFee: 0,
   selectedNeighborhood: null,
 
+  // Disponibilidade de insumos
+  ingredientsAvailability: {},
+  paidExtrasAvailability: {},
+
   // Controle de combos
   isCombo: false,
   isFullCombo: false, // true para Combos com batata+bebida
@@ -217,6 +221,23 @@ const MenuService = {
       if (AppState.cardapioData) {
         MenuUI.render(AppState.cardapioData);
       }
+    });
+  },
+
+  // Carregar disponibilidade de ingredientes e adicionais
+  listenToIngredientsAvailability() {
+    if (!database) return;
+
+    // Listener para ingredientes
+    database.ref("ingredientsAvailability").on("value", (snapshot) => {
+      AppState.ingredientsAvailability = snapshot.val() || {};
+      console.log("📦 Disponibilidade de ingredientes atualizada");
+    });
+
+    // Listener para adicionais pagos
+    database.ref("paidExtrasAvailability").on("value", (snapshot) => {
+      AppState.paidExtrasAvailability = snapshot.val() || {};
+      console.log("💰 Disponibilidade de adicionais pagos atualizada");
     });
   },
 
@@ -889,7 +910,21 @@ const OrderFlow = {
 
     if (!AppState.tempItem.removed) AppState.tempItem.removed = [];
 
-    body.innerHTML = ingredients
+    // Filtrar apenas ingredientes disponíveis
+    const availableIngredients = ingredients.filter(
+      (ing) => AppState.ingredientsAvailability[ing] !== false,
+    );
+
+    if (availableIngredients.length === 0) {
+      body.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <p>Nenhum ingrediente disponível para retirar no momento.</p>
+        </div>
+      `;
+      return;
+    }
+
+    body.innerHTML = availableIngredients
       .map((ing, index) => {
         const isChecked = AppState.tempItem.removed.includes(ing);
         const id = `remove-${index}`;
@@ -923,7 +958,21 @@ const OrderFlow = {
 
     if (!AppState.tempItem.added) AppState.tempItem.added = [];
 
-    body.innerHTML = extras
+    // Filtrar apenas adicionais disponíveis
+    const availableExtras = extras.filter(
+      (extra) => AppState.paidExtrasAvailability[extra.nome] !== false,
+    );
+
+    if (availableExtras.length === 0) {
+      body.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <p>Nenhum adicional disponível no momento.</p>
+        </div>
+      `;
+      return;
+    }
+
+    body.innerHTML = availableExtras
       .map((extra, index) => {
         const isChecked = AppState.tempItem.added.some(
           (a) => a.nome === extra.nome,
@@ -943,7 +992,7 @@ const OrderFlow = {
     body.querySelectorAll("input[type='checkbox']").forEach((input) => {
       input.onchange = (e) => {
         const extraIndex = parseInt(e.target.value);
-        const extra = extras[extraIndex];
+        const extra = availableExtras[extraIndex]; // Usar availableExtras ao invés de extras
 
         if (e.target.checked) {
           const alreadyAdded = AppState.tempItem.added.some(
@@ -1789,6 +1838,9 @@ const App = {
 
       // Iniciar listener de disponibilidade
       MenuService.listenToAvailability();
+
+      // Iniciar listener de disponibilidade de insumos
+      MenuService.listenToIngredientsAvailability();
 
       // Iniciar listener de mudanças de preço - NEW
       MenuService.listenToPriceChanges();

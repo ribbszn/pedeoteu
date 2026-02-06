@@ -77,35 +77,26 @@ function getPrintStyles(type) {
     .section-title {
       font-weight: bold;
       margin-bottom: 8px;
-      font-size: 16px;
+      font-size: 14px;
     }
     
-    .item {
-      margin: 8px 0;
-      padding-left: 10px;
-      page-break-inside: avoid;
-    }
-    
-    .item-qty {
+    .item-header {
       font-weight: bold;
+      margin: 12px 0 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 3px;
+    }
+    
+    .item-detail {
+      margin: 4px 0 4px 10px;
+      font-size: ${type === "kitchen" ? "13px" : "12px"};
+      line-height: 1.4;
+    }
+    
+    .item-detail strong {
       display: inline-block;
-      width: 30px;
-    }
-    
-    .item-line {
-      display: flex;
-      justify-content: space-between;
-      margin: 5px 0;
-    }
-    
-    .item-obs {
-      margin-left: ${type === "kitchen" ? "40px" : "15px"};
-      font-size: 11px;
-      margin-top: 4px;
-      padding-left: 8px;
-      border-left: 2px solid ${type === "kitchen" ? "#333" : "#666"};
-      padding: 3px 0 3px 8px;
-      line-height: 1.5;
+      min-width: 70px;
     }
     
     .total-section {
@@ -131,10 +122,6 @@ function getPrintStyles(type) {
       ${type === "customer" ? "border-top: 1px dashed #000; padding-top: 10px;" : ""}
       page-break-inside: avoid;
     }
-    
-    .print-section-divider {
-      margin: 8px 0;
-    }
   `;
 
   return baseStyles;
@@ -149,10 +136,12 @@ const State = {
   history: [],
   menuData: null,
   menuAvailability: {},
+  ingredientsAvailability: {},
+  paidExtrasAvailability: {},
   soundEnabled: true,
   activeFilter: "all",
-  beepIntervals: {}, // Controlar beeps para cada pedido
-  acceptedOrders: {}, // Rastrear pedidos aceitos
+  beepIntervals: {},
+  acceptedOrders: {},
 };
 
 // ================================
@@ -174,9 +163,9 @@ function initFirebase() {
     updateStatus(true);
     console.log("✅ Firebase inicializado");
 
-    // Iniciar listeners
     listenToOrders();
     loadMenuAvailability();
+    loadIngredientsAvailability();
   } catch (error) {
     console.error("❌ Erro ao inicializar Firebase:", error);
     updateStatus(false);
@@ -208,7 +197,6 @@ function listenToOrders() {
 
   const ordersRef = State.database.ref("pedidos");
 
-  // Listener para novos pedidos
   ordersRef.on("child_added", (snapshot) => {
     const order = snapshot.val();
     const orderId = snapshot.key;
@@ -224,7 +212,6 @@ function listenToOrders() {
     }
   });
 
-  // Listener para pedidos atualizados
   ordersRef.on("child_changed", (snapshot) => {
     const order = snapshot.val();
     const orderId = snapshot.key;
@@ -233,13 +220,11 @@ function listenToOrders() {
       State.orders[orderId] = { ...order, id: orderId };
       renderOrder(orderId, order, false);
     } else {
-      // Pedido foi finalizado ou cancelado
       removeOrderFromKDS(orderId);
       addToHistory(orderId, order);
     }
   });
 
-  // Listener para pedidos removidos
   ordersRef.on("child_removed", (snapshot) => {
     const orderId = snapshot.key;
     removeOrderFromKDS(orderId);
@@ -247,7 +232,217 @@ function listenToOrders() {
 }
 
 // ================================
-// RENDER ORDER
+// PARSE ORDER ITEMS - NOVA FUNÇÃO
+// ================================
+function parseOrderItem(item) {
+  const qty = item.quantidade || item.qtd || 1;
+  const name = item.nome || "Item";
+  const obs = item.observacao || "";
+  const ponto = item.ponto || "";
+  const adicionais = item.adicionais || [];
+  const retiradas = item.retiradas || [];
+
+  // Se a observação contém "---" significa que é um combo com múltiplos itens
+  if (obs.includes("---") && obs.includes("|")) {
+    return parseComboItems(qty, name, obs);
+  }
+
+  // Estrutura organizada do item simples
+  const parsed = {
+    qty,
+    name,
+    ponto: "",
+    sem: [],
+    adicionais: [],
+    obs: [],
+  };
+
+  // Processar observação se existir
+  if (obs) {
+    const lines = obs
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    lines.forEach((line) => {
+      // Detectar ponto
+      if (line.match(/ponto:/i)) {
+        parsed.ponto = line.replace(/ponto:/i, "").trim();
+      }
+      // Detectar retiradas
+      else if (line.match(/sem:/i)) {
+        const items = line.replace(/sem:/i, "").trim();
+        parsed.sem = items.split(",").map((i) => i.trim());
+      }
+      // Detectar adicionais
+      else if (line.match(/adiciona|adicionais:/i)) {
+        const items = line.replace(/adiciona|adicionais:/i, "").trim();
+        parsed.adicionais = items.split(",").map((i) => i.trim());
+      }
+      // Outras observações
+      else if (!line.match(/^nome:/i)) {
+        parsed.obs.push(line);
+      }
+    });
+  }
+
+  // Adicionar campos separados se existirem
+  if (ponto && !parsed.ponto) {
+    parsed.ponto = ponto;
+  }
+
+  if (retiradas.length > 0 && parsed.sem.length === 0) {
+    parsed.sem = retiradas;
+  }
+
+  if (adicionais.length > 0 && parsed.adicionais.length === 0) {
+    parsed.adicionais = adicionais;
+  }
+
+  return parsed;
+}
+
+// ================================
+// PARSE COMBO ITEMS
+// ================================
+function parseComboItems(qty, comboName, obs) {
+  // Dividir a observação pelos separadores "---"
+  const parts = obs
+    .split("|")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const comboItems = [];
+  let currentItem = null;
+
+  parts.forEach((part) => {
+    // Detectar início de um novo item
+    if (part.startsWith("---") && part.endsWith("---")) {
+      // Se já existe um item sendo processado, adicionar à lista
+      if (currentItem) {
+        comboItems.push(currentItem);
+      }
+
+      // Iniciar novo item
+      const itemName = part.replace(/---/g, "").trim();
+      currentItem = {
+        name: itemName,
+        ponto: "",
+        sem: [],
+        adicionais: [],
+        obs: [],
+      };
+    }
+    // Processar detalhes do item atual
+    else if (currentItem) {
+      if (part.match(/^ponto:/i)) {
+        currentItem.ponto = part.replace(/ponto:/i, "").trim();
+      } else if (part.match(/^sem:/i)) {
+        const items = part.replace(/sem:/i, "").trim();
+        currentItem.sem = items
+          .split(",")
+          .map((i) => i.trim())
+          .filter(Boolean);
+      } else if (part.match(/^adiciona|^adicionais:/i)) {
+        const items = part.replace(/adiciona|adicionais:/i, "").trim();
+        currentItem.adicionais = items
+          .split(",")
+          .map((i) => i.trim())
+          .filter(Boolean);
+      } else if (!part.match(/^nome:/i) && part.length > 0) {
+        currentItem.obs.push(part);
+      }
+    }
+  });
+
+  // Adicionar o último item
+  if (currentItem) {
+    comboItems.push(currentItem);
+  }
+
+  return {
+    qty,
+    name: comboName,
+    isCombo: true,
+    items: comboItems,
+  };
+}
+
+// ================================
+// FORMAT ORDER ITEMS - PADRÃO DELIVERY
+// ================================
+function formatOrderItemsForCard(items) {
+  if (!items || items.length === 0) {
+    return '<div class="empty-state">Nenhum item no pedido</div>';
+  }
+
+  return items
+    .map((item) => {
+      const parsed = parseOrderItem(item);
+
+      // Se for um combo, formatar cada sub-item
+      if (parsed.isCombo) {
+        let html = `<div class="order-item-combo">`;
+
+        parsed.items.forEach((subItem) => {
+          html += `<div class="order-item-block">`;
+          html += `<div class="item-header">| --- ${subItem.name} --- |</div>`;
+
+          if (subItem.ponto) {
+            html += `<div class="item-detail"><strong>Ponto:</strong> ${subItem.ponto}</div>`;
+          }
+
+          if (subItem.sem.length > 0) {
+            html += `<div class="item-detail"><strong>Sem:</strong> ${subItem.sem.join(", ")}</div>`;
+          }
+
+          if (subItem.adicionais.length > 0) {
+            html += `<div class="item-detail"><strong>Adicionais:</strong> ${subItem.adicionais.join(", ")}</div>`;
+          }
+
+          if (subItem.obs.length > 0) {
+            subItem.obs.forEach((o) => {
+              html += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
+            });
+          }
+
+          html += `</div>`;
+        });
+
+        html += `</div>`;
+        return html;
+      }
+
+      // Item simples
+      let html = `<div class="order-item-block">`;
+      html += `<div class="item-header">${parsed.qty}x ${parsed.name}</div>`;
+
+      if (parsed.ponto) {
+        html += `<div class="item-detail"><strong>Ponto:</strong> ${parsed.ponto}</div>`;
+      }
+
+      if (parsed.sem.length > 0) {
+        html += `<div class="item-detail"><strong>Sem:</strong> ${parsed.sem.join(", ")}</div>`;
+      }
+
+      if (parsed.adicionais.length > 0) {
+        html += `<div class="item-detail"><strong>Adicionais:</strong> ${parsed.adicionais.join(", ")}</div>`;
+      }
+
+      if (parsed.obs.length > 0) {
+        parsed.obs.forEach((o) => {
+          html += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
+        });
+      }
+
+      html += `</div>`;
+      return html;
+    })
+    .join("");
+}
+
+// ================================
+// RENDER ORDER - FORMATAÇÃO PADRÃO DELIVERY
 // ================================
 function renderOrder(orderId, order, isNew = false) {
   const tipo = order.tipo || order.tipoOrigem || "delivery";
@@ -257,13 +452,11 @@ function renderOrder(orderId, order, isNew = false) {
       : "delivery-container";
   const container = document.getElementById(containerId);
 
-  // Remover empty state se existir
   const emptyState = container.querySelector(".empty-state");
   if (emptyState) {
     emptyState.remove();
   }
 
-  // Verificar se o pedido já existe
   let orderCard = document.getElementById(`order-${orderId}`);
   const isAccepted = State.acceptedOrders[orderId] === true;
 
@@ -273,42 +466,22 @@ function renderOrder(orderId, order, isNew = false) {
     orderCard.id = `order-${orderId}`;
     container.appendChild(orderCard);
 
-    // Iniciar beep se for novo e não aceito
     if (isNew && !isAccepted) {
       startBeep(orderId);
     }
   }
 
-  // Formatar tempo
   const time =
     order.dataHora || new Date(order.timestamp).toLocaleString("pt-BR");
+  const cliente = order.cliente || order.nomeCliente || order.nome || "Cliente";
 
-  // Renderizar adicionais e retiradas
-  const renderExtras = (items) => {
-    return items
-      .map((item) => {
-        let extrasHtml = "";
-
-        if (item.adicionais && item.adicionais.length > 0) {
-          extrasHtml += `<div class="item-obs">➕ Adicionais: ${item.adicionais.join(", ")}</div>`;
-        }
-
-        if (item.retiradas && item.retiradas.length > 0) {
-          extrasHtml += `<div class="item-obs">➖ Sem: ${item.retiradas.join(", ")}</div>`;
-        }
-
-        return extrasHtml;
-      })
-      .join("");
-  };
-
-  // Criar HTML do pedido
   const acceptButton = !isAccepted
     ? `<button class="btn-order btn-accept" onclick="acceptOrder('${orderId}')">
          ✅ Aceitar Pedido
        </button>`
     : "";
 
+  // FORMATAÇÃO PADRÃO DELIVERY
   orderCard.innerHTML = `
     <div class="order-header">
       <span class="order-number">#${orderId.slice(-6).toUpperCase()}</span>
@@ -316,17 +489,19 @@ function renderOrder(orderId, order, isNew = false) {
     </div>
     
     <div class="order-customer">
-      👤 ${order.cliente || order.nomeCliente || order.nome || "Cliente"}
+      👤 ${cliente}
     </div>
     
-    <div class="order-items">
-      ${renderOrderItems(order.itens || [])}
+    ${getItemsSummary(order.itens || [])}
+    
+    <div class="order-items-detailed">
+      ${formatOrderItemsForCard(order.itens || [])}
     </div>
     
     <div class="order-details">
       ${order.modoConsumo ? `<div class="order-detail-row"><span>🍽️ Modo:</span><span>${order.modoConsumo}</span></div>` : ""}
-      ${order.bairro ? `<div class="order-detail-row"><span>🏘️ Bairro:</span><span>${order.bairro}</span></div>` : ""}
       ${order.endereco ? `<div class="order-detail-row"><span>📍 Endereço:</span><span>${order.endereco}</span></div>` : ""}
+      ${order.bairro ? `<div class="order-detail-row"><span>🏘️ Bairro:</span><span>${order.bairro}</span></div>` : ""}
       ${order.taxaEntrega ? `<div class="order-detail-row"><span>🛵 Taxa:</span><span>${formatPrice(order.taxaEntrega)}</span></div>` : ""}
       ${order.pagamento ? `<div class="order-detail-row"><span>💳 Pagamento:</span><span>${order.pagamento}</span></div>` : ""}
       ${order.troco ? `<div class="order-detail-row"><span>💵 Troco:</span><span>${order.troco}</span></div>` : ""}
@@ -360,88 +535,32 @@ function renderOrder(orderId, order, isNew = false) {
     </div>
   `;
 
-  // Atualizar contador
   updateOrderCount();
 }
 
-function renderOrderItems(items) {
-  if (!items || items.length === 0) {
-    return '<div class="empty-state">Nenhum item no pedido</div>';
-  }
+// ================================
+// GET ITEMS SUMMARY
+// ================================
+function getItemsSummary(items) {
+  if (!items || items.length === 0) return "";
 
-  return items
+  const summary = items
     .map((item) => {
       const qty = item.quantidade || item.qtd || 1;
       const name = item.nome || "Item";
-      const obs = item.observacao || "";
-
-      let obsHtml = "";
-
-      // Parse observation details if exists
-      if (obs) {
-        const details = parseObservationDetails(obs);
-        if (details && details.length > 0) {
-          obsHtml = details
-            .map((detail) => `<div class="item-obs-line">${detail.text}</div>`)
-            .join("");
-        } else {
-          obsHtml = `<div class="item-obs-line">${obs}</div>`;
-        }
-      }
-
-      return `
-      <div class="order-item">
-        <span class="item-qty">${qty}x</span>
-        <span class="item-name">${name}</span>
-      </div>
-      ${obsHtml}
-    `;
+      return `${qty}x ${name}`;
     })
-    .join("");
+    .join(" + ");
+
+  return `<div class="order-items-summary">${summary}</div>`;
 }
 
-// Parse observation details
-function parseObservationDetails(obs) {
-  if (!obs) return [];
-
-  const details = [];
-  const lines = obs
-    .split(/\n|;/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  lines.forEach((line) => {
-    let type = "other";
-    let text = line;
-
-    if (line.match(/ponto|mal passad|ao ponto|bem passad/i)) {
-      type = "ponto";
-    } else if (line.match(/sem |retirar|tirar/i)) {
-      type = "retiradas";
-    } else if (line.match(/adicionar|add |com /i)) {
-      type = "adicionais";
-    } else if (line.match(/nome:|^\w+:/i)) {
-      type = "name";
-    }
-
-    details.push({ type, text });
-  });
-
-  return details;
-}
-
+// ================================
+// FORMAT PRICE
+// ================================
 function formatPrice(value) {
   const num = parseFloat(value) || 0;
   return `R$ ${num.toFixed(2).replace(".", ",")}`;
-}
-
-function formatTime(timestamp) {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 // ================================
@@ -451,21 +570,15 @@ async function acceptOrder(orderId) {
   if (!State.database) return;
 
   try {
-    // Marcar como aceito no estado local
     State.acceptedOrders[orderId] = true;
-
-    // Parar o beep
     stopBeep(orderId);
 
-    // Re-renderizar o pedido
     const order = State.orders[orderId];
     if (order) {
       renderOrder(orderId, order, false);
     }
 
-    // Atualizar widget de pedidos em preparo
     updateInProgressWidget();
-
     showToast("✅ Pedido aceito e em preparo", "success");
   } catch (error) {
     console.error("Erro ao aceitar pedido:", error);
@@ -494,7 +607,7 @@ async function completeOrder(orderId) {
 }
 
 // ================================
-// PRINT KITCHEN - VERSÃO MELHORADA
+// PRINT KITCHEN - PADRÃO DELIVERY
 // ================================
 async function printKitchen(orderId) {
   const order = State.orders[orderId];
@@ -503,7 +616,8 @@ async function printKitchen(orderId) {
     return;
   }
 
-  // Criar conteúdo de impressão para cozinha
+  const cliente = order.cliente || order.nomeCliente || order.nome || "Cliente";
+
   let printContent = `
     <!DOCTYPE html>
     <html>
@@ -523,16 +637,14 @@ async function printKitchen(orderId) {
       </div>
 
       <div class="section">
-        <div class="section-title">👤 Cliente</div>
-        <div>${order.cliente || order.nomeCliente || order.nome || "Cliente"}</div>
+        <div class="section-title">👤 ${cliente}</div>
       </div>
 
       ${
         order.modoConsumo
           ? `
       <div class="section">
-        <div class="section-title">🍽️ Modo de Consumo</div>
-        <div>${order.modoConsumo}</div>
+        <div class="section-title">🍽️ Modo: ${order.modoConsumo}</div>
       </div>
       `
           : ""
@@ -542,61 +654,55 @@ async function printKitchen(orderId) {
         <div class="section-title">📋 ITENS DO PEDIDO</div>
   `;
 
-  // Adicionar itens
   if (order.itens && order.itens.length > 0) {
     order.itens.forEach((item) => {
-      const qty = item.quantidade || item.qtd || 1;
-      const name = item.nome || "Item";
-      const obs = item.observacao || "";
-      const adicionais = item.adicionais || [];
-      const retiradas = item.retiradas || [];
-      const ponto = item.ponto || "";
+      const parsed = parseOrderItem(item);
 
-      printContent += `
-        <div class="item">
-          <span class="item-qty">${qty}x</span>
-          <strong>${name}</strong>
-      `;
+      // Se for combo, processar cada sub-item
+      if (parsed.isCombo) {
+        parsed.items.forEach((subItem) => {
+          printContent += `<div class="item-header">| --- ${subItem.name} --- |</div>`;
 
-      // Parse da observação se existir
-      if (obs) {
-        const parsedDetails = parseObservationDetails(obs);
+          if (subItem.ponto) {
+            printContent += `<div class="item-detail"><strong>Ponto:</strong> ${subItem.ponto}</div>`;
+          }
 
-        if (parsedDetails.length > 0) {
-          parsedDetails.forEach((detail) => {
-            let prefix = "";
+          if (subItem.sem.length > 0) {
+            printContent += `<div class="item-detail"><strong>Sem:</strong> ${subItem.sem.join(", ")}</div>`;
+          }
 
-            if (detail.type === "name") {
-              prefix = "📝";
-            } else if (detail.type === "ponto") {
-              prefix = "🔥";
-            } else if (detail.type === "retiradas") {
-              prefix = "➖";
-            } else if (detail.type === "adicionais") {
-              prefix = "➕";
-            }
+          if (subItem.adicionais.length > 0) {
+            printContent += `<div class="item-detail"><strong>Adicionais:</strong> ${subItem.adicionais.join(", ")}</div>`;
+          }
 
-            printContent += `<div class="item-obs">${prefix} ${detail.text}</div>`;
+          if (subItem.obs.length > 0) {
+            subItem.obs.forEach((o) => {
+              printContent += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
+            });
+          }
+        });
+      } else {
+        // Item simples
+        printContent += `<div class="item-header">${parsed.qty}x ${parsed.name}</div>`;
+
+        if (parsed.ponto) {
+          printContent += `<div class="item-detail"><strong>Ponto:</strong> ${parsed.ponto}</div>`;
+        }
+
+        if (parsed.sem.length > 0) {
+          printContent += `<div class="item-detail"><strong>Sem:</strong> ${parsed.sem.join(", ")}</div>`;
+        }
+
+        if (parsed.adicionais.length > 0) {
+          printContent += `<div class="item-detail"><strong>Adicionais:</strong> ${parsed.adicionais.join(", ")}</div>`;
+        }
+
+        if (parsed.obs.length > 0) {
+          parsed.obs.forEach((o) => {
+            printContent += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
           });
-        } else {
-          printContent += `<div class="item-obs">📝 ${obs}</div>`;
         }
       }
-
-      // Campos separados (se não vier como observação)
-      if (ponto && !obs) {
-        printContent += `<div class="item-obs">🔥 Ponto: ${ponto}</div>`;
-      }
-
-      if (retiradas.length > 0 && !obs) {
-        printContent += `<div class="item-obs">➖ SEM: ${retiradas.join(", ")}</div>`;
-      }
-
-      if (adicionais.length > 0 && !obs) {
-        printContent += `<div class="item-obs">➕ ADICIONAR: ${adicionais.join(", ")}</div>`;
-      }
-
-      printContent += `</div>`;
     });
   }
 
@@ -620,7 +726,6 @@ async function printKitchen(orderId) {
     </html>
   `;
 
-  // Abrir janela de impressão
   const printWindow = window.open("", "_blank", "width=350,height=600");
   if (printWindow) {
     printWindow.document.write(printContent);
@@ -631,7 +736,7 @@ async function printKitchen(orderId) {
 }
 
 // ================================
-// PRINT CUSTOMER - VERSÃO MELHORADA
+// PRINT CUSTOMER - PADRÃO DELIVERY
 // ================================
 async function printCustomer(orderId) {
   const order = State.orders[orderId];
@@ -640,7 +745,17 @@ async function printCustomer(orderId) {
     return;
   }
 
-  // Criar conteúdo de impressão para cliente
+  const cliente = order.cliente || order.nomeCliente || order.nome || "Cliente";
+
+  // Gerar resumo
+  const summary = (order.itens || [])
+    .map((item) => {
+      const qty = item.quantidade || item.qtd || 1;
+      const name = item.nome || "Item";
+      return `${qty}x ${name}`;
+    })
+    .join(" + ");
+
   let printContent = `
     <!DOCTYPE html>
     <html>
@@ -661,77 +776,61 @@ async function printCustomer(orderId) {
       </div>
 
       <div class="section">
-        <div><strong>Cliente:</strong> ${order.cliente || order.nomeCliente || order.nome || "Cliente"}</div>
-        ${order.modoConsumo ? `<div><strong>Modo:</strong> ${order.modoConsumo}</div>` : ""}
-        ${order.endereco ? `<div><strong>Endereço:</strong> ${order.endereco}</div>` : ""}
+        <div class="section-title">👤 ${cliente}</div>
+        <div>${summary}</div>
       </div>
 
       <div class="section">
-        <div class="print-section-divider">
-          <strong>ITENS</strong>
-        </div>
   `;
 
-  // Calcular subtotal
-  let subtotal = 0;
-
-  // Adicionar itens
   if (order.itens && order.itens.length > 0) {
     order.itens.forEach((item) => {
-      const qty = item.quantidade || item.qtd || 1;
-      const name = item.nome || "Item";
-      const price = item.preco || 0;
-      const itemTotal = qty * price;
-      subtotal += itemTotal;
+      const parsed = parseOrderItem(item);
 
-      const obs = item.observacao || "";
-      const adicionais = item.adicionais || [];
-      const retiradas = item.retiradas || [];
-      const ponto = item.ponto || "";
+      // Se for combo, processar cada sub-item
+      if (parsed.isCombo) {
+        parsed.items.forEach((subItem) => {
+          printContent += `<div class="item-header">| --- ${subItem.name} --- |</div>`;
 
-      printContent += `
-        <div class="item-line">
-          <span>${qty}x ${name}</span>
-          <span>${formatPrice(itemTotal)}</span>
-        </div>
-      `;
+          if (subItem.ponto) {
+            printContent += `<div class="item-detail"><strong>Ponto:</strong> ${subItem.ponto}</div>`;
+          }
 
-      // Parse da observação se existir
-      if (obs) {
-        const parsedDetails = parseObservationDetails(obs);
+          if (subItem.sem.length > 0) {
+            printContent += `<div class="item-detail"><strong>Sem:</strong> ${subItem.sem.join(", ")}</div>`;
+          }
 
-        if (parsedDetails.length > 0) {
-          parsedDetails.forEach((detail) => {
-            let prefix = "";
+          if (subItem.adicionais.length > 0) {
+            printContent += `<div class="item-detail"><strong>Adicionais:</strong> ${subItem.adicionais.join(", ")}</div>`;
+          }
 
-            if (detail.type === "name") {
-              prefix = "📝";
-            } else if (detail.type === "ponto") {
-              prefix = "🔥";
-            } else if (detail.type === "retiradas") {
-              prefix = "➖";
-            } else if (detail.type === "adicionais") {
-              prefix = "➕";
-            }
+          if (subItem.obs.length > 0) {
+            subItem.obs.forEach((o) => {
+              printContent += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
+            });
+          }
+        });
+      } else {
+        // Item simples
+        printContent += `<div class="item-header">${parsed.qty}x ${parsed.name}</div>`;
 
-            printContent += `<div class="item-obs">${prefix} ${detail.text}</div>`;
-          });
-        } else {
-          printContent += `<div class="item-obs">📝 ${obs}</div>`;
+        if (parsed.ponto) {
+          printContent += `<div class="item-detail"><strong>Ponto:</strong> ${parsed.ponto}</div>`;
         }
-      }
 
-      // Campos separados (se não vier como observação)
-      if (ponto && !obs) {
-        printContent += `<div class="item-obs">🔥 Ponto: ${ponto}</div>`;
-      }
+        if (parsed.sem.length > 0) {
+          printContent += `<div class="item-detail"><strong>Sem:</strong> ${parsed.sem.join(", ")}</div>`;
+        }
 
-      if (retiradas.length > 0 && !obs) {
-        printContent += `<div class="item-obs">➖ ${retiradas.join(", ")}</div>`;
-      }
+        if (parsed.adicionais.length > 0) {
+          printContent += `<div class="item-detail"><strong>Adicionais:</strong> ${parsed.adicionais.join(", ")}</div>`;
+        }
 
-      if (adicionais.length > 0 && !obs) {
-        printContent += `<div class="item-obs">➕ ${adicionais.join(", ")}</div>`;
+        if (parsed.obs.length > 0) {
+          parsed.obs.forEach((o) => {
+            printContent += `<div class="item-detail"><strong>Obs:</strong> ${o}</div>`;
+          });
+        }
       }
     });
   }
@@ -739,12 +838,16 @@ async function printCustomer(orderId) {
   printContent += `
       </div>
 
+      <div class="section">
+        ${order.modoConsumo ? `<div><strong>🍽️ Modo:</strong> ${order.modoConsumo}</div>` : ""}
+        ${order.endereco ? `<div><strong>📍 Endereço:</strong> ${order.endereco}</div>` : ""}
+        ${order.pagamento ? `<div><strong>💳 Pagamento:</strong> ${order.pagamento}</div>` : ""}
+      </div>
+
       <div class="total-section">
-        ${order.pagamento ? `<div><strong>Pagamento:</strong> ${order.pagamento}</div>` : ""}
-        ${order.troco ? `<div><strong>Troco para:</strong> ${order.troco}</div>` : ""}
         <div class="total">
           <span>TOTAL:</span>
-          <span>${formatPrice(order.total || subtotal)}</span>
+          <span>${formatPrice(order.total || 0)}</span>
         </div>
       </div>
 
@@ -765,7 +868,6 @@ async function printCustomer(orderId) {
     </html>
   `;
 
-  // Abrir janela de impressão
   const printWindow = window.open("", "_blank", "width=350,height=600");
   if (printWindow) {
     printWindow.document.write(printContent);
@@ -781,18 +883,15 @@ async function printCustomer(orderId) {
 function startBeep(orderId) {
   if (!State.soundEnabled) return;
 
-  // Parar beep existente se houver
   stopBeep(orderId);
 
   const beepAudio = document.getElementById("beep-sound");
 
-  // Tocar o beep em loop
   beepAudio.currentTime = 0;
   beepAudio.play().catch((error) => {
     console.log("Não foi possível reproduzir beep:", error);
   });
 
-  // Guardar referência
   State.beepIntervals[orderId] = beepAudio;
 }
 
@@ -801,7 +900,6 @@ function stopBeep(orderId) {
   beepAudio.pause();
   beepAudio.currentTime = 0;
 
-  // Remover referência
   delete State.beepIntervals[orderId];
 }
 
@@ -833,10 +931,8 @@ async function cancelOrder(orderId) {
 // REMOVE ORDER FROM KDS
 // ================================
 function removeOrderFromKDS(orderId) {
-  // Parar beep se estiver tocando
   stopBeep(orderId);
 
-  // Limpar estado de aceito
   delete State.acceptedOrders[orderId];
 
   const orderCard = document.getElementById(`order-${orderId}`);
@@ -847,6 +943,7 @@ function removeOrderFromKDS(orderId) {
       delete State.orders[orderId];
       updateOrderCount();
       checkEmptyStates();
+      updateInProgressWidget();
     }, 300);
   }
 }
@@ -890,73 +987,9 @@ function checkEmptyStates() {
 function addToHistory(orderId, order) {
   State.history.unshift({ ...order, id: orderId });
 
-  // Manter apenas últimos 100 pedidos no histórico
   if (State.history.length > 100) {
     State.history = State.history.slice(0, 100);
   }
-}
-
-function renderHistory() {
-  const content = document.getElementById("history-content");
-  const filter = State.activeFilter;
-
-  let filteredHistory = State.history;
-
-  if (filter === "today") {
-    const today = new Date().setHours(0, 0, 0, 0);
-    filteredHistory = State.history.filter((order) => {
-      const orderDate = new Date(
-        order.timestamp || order.completedAt || order.cancelledAt,
-      ).setHours(0, 0, 0, 0);
-      return orderDate === today;
-    });
-  } else if (filter === "week") {
-    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    filteredHistory = State.history.filter((order) => {
-      const orderTime =
-        order.timestamp || order.completedAt || order.cancelledAt;
-      return orderTime >= weekAgo;
-    });
-  }
-
-  if (filteredHistory.length === 0) {
-    content.innerHTML =
-      '<div class="empty-state"><p>Nenhum pedido no histórico</p></div>';
-    return;
-  }
-
-  content.innerHTML = filteredHistory
-    .map((order) => {
-      const statusClass =
-        order.status === "completed" ? "completed" : "cancelled";
-      const statusText =
-        order.status === "completed" ? "✅ Finalizado" : "❌ Cancelado";
-      const time =
-        order.completedTime ||
-        order.cancelledTime ||
-        order.dataHora ||
-        new Date(order.timestamp).toLocaleString("pt-BR");
-
-      return `
-      <div class="history-card ${statusClass}">
-        <div class="order-header">
-          <span class="order-number">#${order.id.slice(-6).toUpperCase()}</span>
-          <span class="order-time">${time}</span>
-        </div>
-        <div class="order-customer">
-          👤 ${order.cliente || order.nomeCliente || "Cliente"}
-        </div>
-        <div class="order-details">
-          <div class="order-detail-row">
-            <span>Status:</span>
-            <span>${statusText}</span>
-          </div>
-          <div class="order-total">Total: ${formatPrice(order.total || 0)}</div>
-        </div>
-      </div>
-    `;
-    })
-    .join("");
 }
 
 function loadHistoryFromFirebase() {
@@ -967,479 +1000,219 @@ function loadHistoryFromFirebase() {
     .orderByChild("status")
     .once("value")
     .then((snapshot) => {
-      State.history = [];
-      snapshot.forEach((child) => {
-        const order = child.val();
+      const allOrders = [];
+      snapshot.forEach((childSnapshot) => {
+        const order = childSnapshot.val();
         if (order.status === "completed" || order.status === "cancelled") {
-          State.history.push({ ...order, id: child.key });
+          allOrders.push({ ...order, id: childSnapshot.key });
         }
       });
 
-      // Ordenar por data mais recente
-      State.history.sort((a, b) => {
-        const timeA = a.completedAt || a.cancelledAt || a.timestamp || 0;
-        const timeB = b.completedAt || b.cancelledAt || b.timestamp || 0;
-        return timeB - timeA;
-      });
+      State.history = allOrders
+        .sort(
+          (a, b) =>
+            (b.completedAt || b.cancelledAt || 0) -
+            (a.completedAt || a.cancelledAt || 0),
+        )
+        .slice(0, 100);
 
       renderHistory();
     })
     .catch((error) => {
       console.error("Erro ao carregar histórico:", error);
+      showToast("Erro ao carregar histórico", "error");
     });
 }
 
-// ================================
-// MENU MANAGEMENT
-// ================================
-async function loadMenuData() {
-  try {
-    const response = await fetch(CONFIG.menuDataUrl);
-    if (!response.ok) throw new Error("Erro ao carregar cardápio");
-    State.menuData = await response.json();
-    renderMenuManagement();
-  } catch (error) {
-    console.error("Erro ao carregar cardápio:", error);
-    showToast("Erro ao carregar cardápio", "error");
+function renderHistory() {
+  const container = document.getElementById("history-content");
+  if (!container) return;
+
+  let filtered = State.history;
+
+  if (State.activeFilter === "today") {
+    const today = new Date().toDateString();
+    filtered = State.history.filter((order) => {
+      const orderDate = new Date(
+        order.completedAt || order.cancelledAt || 0,
+      ).toDateString();
+      return orderDate === today;
+    });
+  } else if (State.activeFilter === "week") {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    filtered = State.history.filter(
+      (order) => (order.completedAt || order.cancelledAt || 0) > weekAgo,
+    );
   }
-}
 
-function loadMenuAvailability() {
-  if (!State.database) return;
-
-  State.database.ref("menuAvailability").on("value", (snapshot) => {
-    State.menuAvailability = snapshot.val() || {};
-    if (State.menuData) {
-      renderMenuManagement();
-    }
-  });
-}
-
-function renderMenuManagement() {
-  const container = document.getElementById("menu-categories");
-
-  if (!State.menuData) {
-    container.innerHTML =
-      '<div class="empty-state"><p>Carregando cardápio...</p></div>';
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Nenhum pedido encontrado</p>
+      </div>
+    `;
     return;
   }
 
-  let availableCount = 0;
-  let unavailableCount = 0;
-
-  const html = Object.entries(State.menuData)
-    .map(([category, items]) => {
-      const itemsHtml = items
-        .map((item, itemIndex) => {
-          const itemKey = `${category}-${item.nome}`;
-          const isAvailable = State.menuAvailability[itemKey] !== false;
-
-          if (isAvailable) {
-            availableCount++;
-          } else {
-            unavailableCount++;
-          }
-
-          // Gerar campos de preço editáveis
-          let priceEditorHtml = "";
-
-          if (item.precoBase) {
-            if (Array.isArray(item.precoBase)) {
-              // Múltiplos preços (ex: Simples, Duplo, Triplo)
-              const opcoes = item.opcoes || [];
-              priceEditorHtml = item.precoBase
-                .map((price, priceIndex) => {
-                  const optionName =
-                    opcoes[priceIndex] || `Opção ${priceIndex + 1}`;
-                  const inputId = `price-${category}-${itemIndex}-${priceIndex}`;
-                  return `
-                    <div class="menu-item-price-editor">
-                      <strong class="price-label">${optionName}:</strong>
-                      <div class="price-input-wrapper">
-                        <span class="price-currency">R$</span>
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          min="0" 
-                          class="price-input" 
-                          id="${inputId}"
-                          value="${price.toFixed(2)}"
-                          data-category="${category}"
-                          data-item-name="${item.nome}"
-                          data-price-index="${priceIndex}"
-                          data-original-value="${price.toFixed(2)}"
-                          onchange="handlePriceChange(this)"
-                        />
-                      </div>
-                      <button 
-                        class="btn-save-price" 
-                        id="save-${inputId}"
-                        onclick="savePriceChange('${category}', '${item.nome}', ${priceIndex}, '${inputId}')"
-                      >
-                        💾 Salvar
-                      </button>
-                      <span class="price-save-indicator" id="indicator-${inputId}">✓</span>
-                    </div>
-                  `;
-                })
-                .join("");
-            } else {
-              // Preço único
-              const inputId = `price-${category}-${itemIndex}-0`;
-              priceEditorHtml = `
-                <div class="menu-item-price-editor">
-                  <strong class="price-label-short">Preço:</strong>
-                  <div class="price-input-wrapper">
-                    <span class="price-currency">R$</span>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      min="0" 
-                      class="price-input" 
-                      id="${inputId}"
-                      value="${item.precoBase.toFixed(2)}"
-                      data-category="${category}"
-                      data-item-name="${item.nome}"
-                      data-price-index="0"
-                      data-original-value="${item.precoBase.toFixed(2)}"
-                      onchange="handlePriceChange(this)"
-                    />
-                  </div>
-                  <button 
-                    class="btn-save-price" 
-                    id="save-${inputId}"
-                    onclick="savePriceChange('${category}', '${item.nome}', null, '${inputId}')"
-                  >
-                    💾 Salvar
-                  </button>
-                  <span class="price-save-indicator" id="indicator-${inputId}">✓</span>
-                </div>
-              `;
-            }
-          }
-
-          const priceText = item.precoBase
-            ? Array.isArray(item.precoBase)
-              ? formatPrice(Math.min(...item.precoBase))
-              : formatPrice(item.precoBase)
-            : "Preço variável";
-
-          return `
-        <div class="menu-item ${isAvailable ? "" : "unavailable"}">
-          <div class="menu-item-header">
-            <div class="menu-item-info">
-              <div class="menu-item-name">${item.nome}</div>
-              <div class="menu-item-price">${priceText}</div>
-            </div>
-            <div class="menu-item-controls">
-              <div class="menu-item-toggle ${isAvailable ? "available" : ""}" 
-                   onclick="toggleMenuItem('${category}', '${item.nome}')">
-              </div>
-            </div>
-          </div>
-          ${priceEditorHtml}
-        </div>
-      `;
-        })
-        .join("");
+  container.innerHTML = filtered
+    .map((order) => {
+      const status =
+        order.status === "completed"
+          ? '<span class="status-badge completed">✅ Concluído</span>'
+          : '<span class="status-badge cancelled">❌ Cancelado</span>';
 
       return `
-      <div class="menu-category">
-        <div class="category-header-menu" onclick="toggleCategory(this)">
-          <span class="category-name">${category}</span>
-          <span class="category-toggle">▼</span>
+      <div class="history-item">
+        <div class="history-header">
+          <span class="history-number">#${order.id.slice(-6).toUpperCase()}</span>
+          ${status}
         </div>
-        <div class="category-items">
-          ${itemsHtml}
-        </div>
+        <div class="history-customer">👤 ${order.cliente || order.nomeCliente || "Cliente"}</div>
+        <div class="history-time">${order.completedTime || order.cancelledTime || ""}</div>
+        <div class="history-total">Total: ${formatPrice(order.total || 0)}</div>
       </div>
     `;
     })
     .join("");
-
-  container.innerHTML = html;
-
-  // Atualizar contadores
-  document.getElementById("available-count").textContent = availableCount;
-  document.getElementById("unavailable-count").textContent = unavailableCount;
-}
-
-async function toggleMenuItem(category, itemName) {
-  if (!State.database) return;
-
-  const itemKey = `${category}-${itemName}`;
-  const currentStatus = State.menuAvailability[itemKey] !== false;
-  const newStatus = !currentStatus;
-
-  try {
-    await State.database.ref(`menuAvailability/${itemKey}`).set(newStatus);
-
-    const statusText = newStatus ? "disponível" : "indisponível";
-    showToast(`${itemName} marcado como ${statusText}`, "success");
-  } catch (error) {
-    console.error("Erro ao atualizar item:", error);
-    showToast("Erro ao atualizar item", "error");
-  }
-}
-
-function toggleCategory(element) {
-  element.classList.toggle("active");
-  const items = element.nextElementSibling;
-  items.style.display = items.style.display === "none" ? "block" : "none";
-}
-
-function handlePriceChange(input) {
-  const saveButton = document.getElementById(`save-${input.id}`);
-  const indicator = document.getElementById(`indicator-${input.id}`);
-
-  if (saveButton && indicator) {
-    const hasChanged =
-      parseFloat(input.value) !== parseFloat(input.dataset.originalValue);
-    saveButton.style.display = hasChanged ? "inline-block" : "none";
-    indicator.style.display = hasChanged ? "none" : "inline";
-  }
-}
-
-async function savePriceChange(category, itemName, priceIndex, inputId) {
-  const input = document.getElementById(inputId);
-  const saveButton = document.getElementById(`save-${inputId}`);
-  const indicator = document.getElementById(`indicator-${inputId}`);
-
-  if (!input || !State.menuData || !State.database) {
-    showToast("❌ Erro: dados não encontrados", "error");
-    return;
-  }
-
-  const newPrice = parseFloat(input.value);
-
-  if (isNaN(newPrice) || newPrice < 0) {
-    showToast("❌ Preço inválido!", "error");
-    return;
-  }
-
-  // Desabilitar botão e mostrar loading
-  if (saveButton) {
-    saveButton.disabled = true;
-    saveButton.textContent = "⏳ Salvando...";
-  }
-
-  try {
-    // Encontrar o item no State.menuData
-    const categoryItems = State.menuData[category];
-    if (!categoryItems) {
-      throw new Error("Categoria não encontrada");
-    }
-
-    const item = categoryItems.find((i) => i.nome === itemName);
-    if (!item) {
-      throw new Error("Item não encontrado");
-    }
-
-    // Atualizar preço localmente primeiro
-    if (priceIndex !== null && Array.isArray(item.precoBase)) {
-      item.precoBase[priceIndex] = newPrice;
-    } else {
-      item.precoBase = newPrice;
-    }
-
-    // Salvar no Firebase
-    const itemPath = `cardapio/${category}`;
-    const updatedItems = categoryItems;
-
-    await State.database.ref(itemPath).set(updatedItems);
-
-    // Atualizar valor original
-    input.dataset.originalValue = newPrice.toFixed(2);
-
-    // Mostrar indicador de sucesso
-    if (saveButton && indicator) {
-      saveButton.style.display = "none";
-      indicator.style.display = "inline";
-    }
-
-    // Atualizar renderização
-    renderMenuManagement();
-
-    showToast(`💰 Preço de "${itemName}" atualizado com sucesso!`, "success");
-  } catch (error) {
-    console.error("Erro ao salvar preço:", error);
-    showToast(`❌ Erro ao salvar preço: ${error.message}`, "error");
-
-    // Reabilitar botão em caso de erro
-    if (saveButton) {
-      saveButton.disabled = false;
-      saveButton.textContent = "💾 Salvar";
-    }
-  }
 }
 
 // ================================
-// IN-PROGRESS WIDGET
+// IN PROGRESS WIDGET
 // ================================
-
-// Inicializar widget
 function initInProgressWidget() {
-  console.log("🔧 Inicializando widget Em Preparo...");
-
+  const widget = document.getElementById("in-progress-widget");
   const header = document.getElementById("in-progress-header");
   const dropdown = document.getElementById("in-progress-dropdown");
 
-  if (!header || !dropdown) {
+  if (!widget || !header || !dropdown) {
     console.error("❌ Elementos do widget não encontrados");
     return;
   }
 
-  header.addEventListener("click", function () {
-    header.classList.toggle("expanded");
+  header.addEventListener("click", () => {
     dropdown.classList.toggle("show");
-    console.log("📂 Widget expandido:", dropdown.classList.contains("show"));
   });
 
-  // Atualizar widget inicial
+  document.addEventListener("click", (e) => {
+    if (!widget.contains(e.target)) {
+      dropdown.classList.remove("show");
+    }
+  });
+
   updateInProgressWidget();
-  console.log("✅ Widget Em Preparo inicializado");
+  console.log("✅ Widget de pedidos em preparo inicializado");
 }
 
-// Atualizar lista de pedidos em preparo
 function updateInProgressWidget() {
-  const countElement = document.getElementById("in-progress-count");
-  const listElement = document.getElementById("in-progress-list");
+  const countEl = document.getElementById("in-progress-count");
+  const listEl = document.getElementById("in-progress-list");
 
-  if (!countElement || !listElement) {
-    console.warn("⚠️ Elementos do widget não encontrados");
-    return;
-  }
+  if (!countEl || !listEl) return;
 
-  // Filtrar pedidos em preparo
   const inProgressOrders = Object.entries(State.orders)
-    .filter(([id, order]) => {
-      const isAccepted = State.acceptedOrders[id] === true;
-      const isPending = order.status === "pending";
-      return isAccepted && isPending;
-    })
-    .map(([id, order]) => ({ id, ...order }));
+    .filter(([id, order]) => State.acceptedOrders[id] === true)
+    .map(([id, order]) => ({ ...order, id }));
 
-  console.log(
-    `📊 Pedidos em preparo: ${inProgressOrders.length}`,
-    inProgressOrders,
-  );
+  countEl.textContent = inProgressOrders.length;
 
-  // Atualizar contador
-  countElement.textContent = inProgressOrders.length;
-
-  // Renderizar lista
   if (inProgressOrders.length === 0) {
-    listElement.innerHTML = `
+    listEl.innerHTML = `
       <div class="empty-state-inline">
         <p>Nenhum pedido em preparo</p>
       </div>
     `;
-  } else {
-    // Ordenar por timestamp (mais antigo primeiro)
-    inProgressOrders.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-    listElement.innerHTML = inProgressOrders
-      .map((order) => renderInProgressOrder(order))
-      .join("");
+    return;
   }
+
+  listEl.innerHTML = inProgressOrders
+    .map((order) => renderInProgressOrder(order))
+    .join("");
 }
 
-// Renderizar pedido individual
 function renderInProgressOrder(order) {
-  const orderNumber = order.numeroPedido || order.id.substring(0, 8);
-  const customer = order.cliente || order.nomeCliente || "Cliente";
-  const time = order.timestamp ? formatTime(order.timestamp) : "";
-  const items = order.itens || order.items || [];
+  const orderNumber = order.id.slice(-6).toUpperCase();
+  const customer =
+    order.cliente || order.nomeCliente || order.nome || "Cliente";
+  const time =
+    order.dataHora ||
+    new Date(order.timestamp).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  const itemsHTML = items
+  const itemsHTML = (order.itens || [])
     .map((item) => {
-      const qty = item.quantidade || item.qtd || 1;
-      const name = item.nome || "Item";
-      const obs = item.observacao || "";
-      const adicionais = item.adicionais || [];
-      const retiradas = item.retiradas || [];
-      const ponto = item.ponto || "";
+      const parsed = parseOrderItem(item);
 
-      // Verificar se tem modificações
-      const hasMods =
-        obs || adicionais.length > 0 || retiradas.length > 0 || ponto;
-      const modClass = hasMods ? "has-mods" : "";
+      // Se for combo, processar cada sub-item
+      if (parsed.isCombo) {
+        return parsed.items
+          .map((subItem) => {
+            let modsParts = [];
 
-      // Construir HTML de modificações
-      let modsHTML = "";
-      if (hasMods) {
-        const modsParts = [];
+            if (subItem.ponto) {
+              modsParts.push(
+                `<div class="in-progress-mod in-progress-mod-obs">🔥 ${subItem.ponto}</div>`,
+              );
+            }
 
-        // Ponto da carne
-        if (ponto) {
-          modsParts.push(
-            `<div class="in-progress-mod in-progress-mod-obs">Ponto: ${ponto}</div>`,
-          );
-        }
+            if (subItem.sem.length > 0) {
+              modsParts.push(
+                `<div class="in-progress-mod in-progress-mod-remove">➖ Sem: ${subItem.sem.join(", ")}</div>`,
+              );
+            }
 
-        // Retiradas
-        if (retiradas.length > 0) {
-          retiradas.forEach((ret) => {
-            const retName = typeof ret === "string" ? ret : ret.nome || ret;
-            modsParts.push(
-              `<div class="in-progress-mod in-progress-mod-remove">Sem ${retName}</div>`,
-            );
-          });
-        }
+            if (subItem.adicionais.length > 0) {
+              modsParts.push(
+                `<div class="in-progress-mod in-progress-mod-add">➕ ${subItem.adicionais.join(", ")}</div>`,
+              );
+            }
 
-        // Adicionais
-        if (adicionais.length > 0) {
-          adicionais.forEach((add) => {
-            const addName = typeof add === "string" ? add : add.nome || add;
-            modsParts.push(
-              `<div class="in-progress-mod in-progress-mod-add">+ ${addName}</div>`,
-            );
-          });
-        }
+            const modsHTML =
+              modsParts.length > 0
+                ? `<div class="in-progress-item-mods">${modsParts.join("")}</div>`
+                : "";
 
-        // Observações do texto
-        if (obs) {
-          try {
-            const details = parseObservationDetails(obs);
-            details.forEach((detail) => {
-              if (detail.type === "retiradas" && retiradas.length === 0) {
-                modsParts.push(
-                  `<div class="in-progress-mod in-progress-mod-remove">${detail.text}</div>`,
-                );
-              } else if (
-                detail.type === "adicionais" &&
-                adicionais.length === 0
-              ) {
-                modsParts.push(
-                  `<div class="in-progress-mod in-progress-mod-add">${detail.text}</div>`,
-                );
-              } else if (detail.type === "ponto" && !ponto) {
-                modsParts.push(
-                  `<div class="in-progress-mod in-progress-mod-obs">${detail.text}</div>`,
-                );
-              } else if (detail.type === "other") {
-                modsParts.push(
-                  `<div class="in-progress-mod in-progress-mod-obs">${detail.text}</div>`,
-                );
-              }
-            });
-          } catch (e) {
-            // Se parseObservationDetails não existir ou falhar, mostrar obs como está
-            modsParts.push(
-              `<div class="in-progress-mod in-progress-mod-obs">${obs}</div>`,
-            );
-          }
-        }
-
-        if (modsParts.length > 0) {
-          modsHTML = `<div class="in-progress-item-mods">${modsParts.join("")}</div>`;
-        }
+            return `
+          <div class="in-progress-item">
+            <span class="in-progress-item-name">${subItem.name}</span>
+            ${modsHTML}
+          </div>
+        `;
+          })
+          .join("");
       }
 
+      // Item simples
+      let modsParts = [];
+
+      if (parsed.ponto) {
+        modsParts.push(
+          `<div class="in-progress-mod in-progress-mod-obs">🔥 ${parsed.ponto}</div>`,
+        );
+      }
+
+      if (parsed.sem.length > 0) {
+        modsParts.push(
+          `<div class="in-progress-mod in-progress-mod-remove">➖ Sem: ${parsed.sem.join(", ")}</div>`,
+        );
+      }
+
+      if (parsed.adicionais.length > 0) {
+        modsParts.push(
+          `<div class="in-progress-mod in-progress-mod-add">➕ ${parsed.adicionais.join(", ")}</div>`,
+        );
+      }
+
+      const modsHTML =
+        modsParts.length > 0
+          ? `<div class="in-progress-item-mods">${modsParts.join("")}</div>`
+          : "";
+
       return `
-      <div class="in-progress-item ${modClass}">
-        <span class="in-progress-item-qty">${qty}x</span>
-        <span class="in-progress-item-name">${name}</span>
+      <div class="in-progress-item">
+        <span class="in-progress-item-qty">${parsed.qty}x</span>
+        <span class="in-progress-item-name">${parsed.name}</span>
         ${modsHTML}
       </div>
     `;
@@ -1462,39 +1235,30 @@ function renderInProgressOrder(order) {
 
 // Sobrescrever funções originais para atualizar widget
 (function () {
-  // Guardar referências originais
   const _acceptOrder = window.acceptOrder;
   const _completeOrder = window.completeOrder;
   const _cancelOrder = window.cancelOrder;
 
-  // Sobrescrever acceptOrder
   window.acceptOrder = async function (orderId) {
-    console.log("✅ Aceitando pedido:", orderId);
     await _acceptOrder.call(this, orderId);
     setTimeout(() => {
       updateInProgressWidget();
     }, 200);
   };
 
-  // Sobrescrever completeOrder
   window.completeOrder = async function (orderId) {
-    console.log("🏁 Completando pedido:", orderId);
     await _completeOrder.call(this, orderId);
     setTimeout(() => {
       updateInProgressWidget();
     }, 200);
   };
 
-  // Sobrescrever cancelOrder
   window.cancelOrder = async function (orderId) {
-    console.log("❌ Cancelando pedido:", orderId);
     await _cancelOrder.call(this, orderId);
     setTimeout(() => {
       updateInProgressWidget();
     }, 200);
   };
-
-  console.log("🔄 Funções de pedido sobrescritas com sucesso");
 })();
 
 // ================================
@@ -1519,7 +1283,6 @@ function toggleSound() {
     statusEl.textContent = `Som: ${State.soundEnabled ? "ON" : "OFF"}`;
   }
 
-  // Se desligou o som, parar todos os beeps
   if (!State.soundEnabled) {
     Object.keys(State.beepIntervals).forEach((orderId) => {
       stopBeep(orderId);
@@ -1549,7 +1312,6 @@ function showToast(message, type = "info") {
 // UI INITIALIZATION
 // ================================
 function initUI() {
-  // Botão de gestão de cardápio
   const btnMenuManagement = document.getElementById("btn-menu-management");
   if (btnMenuManagement) {
     btnMenuManagement.addEventListener("click", () => {
@@ -1563,7 +1325,21 @@ function initUI() {
     });
   }
 
-  // Botão de histórico
+  const btnIngredientsManagement = document.getElementById(
+    "btn-ingredients-management",
+  );
+  if (btnIngredientsManagement) {
+    btnIngredientsManagement.addEventListener("click", () => {
+      const modal = document.getElementById("ingredients-modal");
+      const overlay = document.getElementById("overlay");
+      if (modal && overlay) {
+        modal.classList.add("show");
+        overlay.classList.add("show");
+        loadIngredientsData();
+      }
+    });
+  }
+
   const btnHistory = document.getElementById("btn-history");
   if (btnHistory) {
     btnHistory.addEventListener("click", () => {
@@ -1577,13 +1353,11 @@ function initUI() {
     });
   }
 
-  // Botão de som
   const btnSound = document.getElementById("btn-sound");
   if (btnSound) {
     btnSound.addEventListener("click", toggleSound);
   }
 
-  // Fechar modais e sidebar
   const closeButtons = document.querySelectorAll(".btn-close");
   closeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1593,7 +1367,6 @@ function initUI() {
     });
   });
 
-  // Overlay fecha modais e sidebar
   const overlay = document.getElementById("overlay");
   if (overlay) {
     overlay.addEventListener("click", () => {
@@ -1603,7 +1376,6 @@ function initUI() {
     });
   }
 
-  // Filtros de histórico
   const filterButtons = document.querySelectorAll(".filter-btn");
   filterButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1614,7 +1386,6 @@ function initUI() {
     });
   });
 
-  // Busca no cardápio
   const searchInput = document.getElementById("menu-search-input");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -1635,7 +1406,629 @@ function initUI() {
   }
 }
 
-// Inicializar quando DOM estiver pronto
+// ================================
+// MENU MANAGEMENT
+// ================================
+function loadMenuAvailability() {
+  if (!State.database) return;
+
+  State.database.ref("menuAvailability").on("value", (snapshot) => {
+    State.menuAvailability = snapshot.val() || {};
+    console.log(
+      "📋 Disponibilidade do cardápio carregada:",
+      State.menuAvailability,
+    );
+  });
+}
+
+async function loadMenuData() {
+  try {
+    const response = await fetch(CONFIG.menuDataUrl);
+    State.menuData = await response.json();
+    renderMenuCategories();
+    setupMenuListeners();
+  } catch (error) {
+    console.error("Erro ao carregar cardápio:", error);
+    showToast("Erro ao carregar cardápio", "error");
+  }
+}
+
+function renderMenuCategories() {
+  const container = document.getElementById("menu-categories");
+  if (!container || !State.menuData) return;
+
+  let availableCount = 0;
+  let unavailableCount = 0;
+
+  const categoriesHTML = Object.entries(State.menuData)
+    .map(([category, items]) => {
+      const itemsHTML = items
+        .map((item) => {
+          const itemKey = `${category}:${item.nome}`;
+          const isAvailable = State.menuAvailability[itemKey] !== false;
+
+          if (isAvailable) {
+            availableCount++;
+          } else {
+            unavailableCount++;
+          }
+
+          // Renderizar opções com toggles individuais se houver
+          let opcoesHTML = "";
+          if (item.opcoes && item.opcoes.length > 0) {
+            const opcoesWithToggles = item.opcoes
+              .map((opcao, index) => {
+                const opcaoKey = `${category}:${item.nome}:${opcao}`;
+                const isOpcaoAvailable =
+                  State.menuAvailability[opcaoKey] !== false;
+
+                return `
+                <div class="menu-option-item ${!isOpcaoAvailable ? "unavailable" : ""}">
+                  <span class="menu-option-name">${opcao}</span>
+                  <div class="menu-option-toggle ${isOpcaoAvailable ? "active" : ""}" 
+                       data-category="${category}" 
+                       data-name="${item.nome}"
+                       data-option="${opcao}">
+                  </div>
+                </div>
+              `;
+              })
+              .join("");
+
+            opcoesHTML = `
+              <div class="menu-item-options-container">
+                <div class="menu-options-label">Opções:</div>
+                ${opcoesWithToggles}
+              </div>
+            `;
+          }
+
+          return `
+            <div class="menu-item ${!isAvailable ? "unavailable" : ""}" data-item="${itemKey}">
+              <div class="menu-item-header">
+                <div class="menu-item-info">
+                  <div class="menu-item-name">${item.nome}</div>
+                  ${item.descricao ? `<div class="menu-item-desc">${item.descricao}</div>` : ""}
+                </div>
+                <div class="menu-item-controls">
+                  <span class="menu-item-status ${isAvailable ? "available" : "unavailable"}">
+                    ${isAvailable ? "✅ Disponível" : "❌ Indisponível"}
+                  </span>
+                  <div class="menu-item-toggle ${isAvailable ? "active" : ""}" 
+                       data-category="${category}" 
+                       data-name="${item.nome}">
+                  </div>
+                </div>
+              </div>
+              ${opcoesHTML}
+            </div>
+          `;
+        })
+        .join("");
+
+      return `
+        <div class="menu-category">
+          <div class="menu-category-title">
+            ${getCategoryIcon(category)} ${category}
+            <span class="menu-category-count">(${items.length} itens)</span>
+          </div>
+          <div class="menu-category-items">
+            ${itemsHTML}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = categoriesHTML;
+
+  document.getElementById("available-count").textContent = availableCount;
+  document.getElementById("unavailable-count").textContent = unavailableCount;
+}
+
+function getCategoryIcon(category) {
+  const icons = {
+    Promoções: "🎉",
+    Clones: "👥",
+    Combos: "🍔",
+    Artesanais: "🥩",
+    "Batata Frita": "🍟",
+    Bebidas: "🥤",
+  };
+  return icons[category] || "📦";
+}
+
+function setupMenuListeners() {
+  // Toggles de itens principais
+  const itemToggles = document.querySelectorAll(".menu-item-toggle");
+
+  itemToggles.forEach((toggle) => {
+    toggle.addEventListener("click", async () => {
+      const category = toggle.dataset.category;
+      const name = toggle.dataset.name;
+      const option = toggle.dataset.option;
+      const isActive = toggle.classList.contains("active");
+      const newStatus = !isActive;
+
+      try {
+        // Se tiver opção, é um sub-item
+        if (option) {
+          await toggleMenuOptionAvailability(category, name, option, newStatus);
+
+          toggle.classList.toggle("active");
+          const optionItem = toggle.closest(".menu-option-item");
+
+          if (newStatus) {
+            optionItem.classList.remove("unavailable");
+            showToast(`✅ ${name} - ${option} disponível`, "success");
+          } else {
+            optionItem.classList.add("unavailable");
+            showToast(`❌ ${name} - ${option} indisponível`, "info");
+          }
+        } else {
+          // Item principal
+          await toggleMenuItemAvailability(category, name, newStatus);
+
+          toggle.classList.toggle("active");
+          const item = toggle.closest(".menu-item");
+          const status = item.querySelector(".menu-item-status");
+
+          if (newStatus) {
+            item.classList.remove("unavailable");
+            status.classList.remove("unavailable");
+            status.classList.add("available");
+            status.textContent = "✅ Disponível";
+            showToast(`✅ ${name} disponível`, "success");
+          } else {
+            item.classList.add("unavailable");
+            status.classList.add("unavailable");
+            status.classList.remove("available");
+            status.textContent = "❌ Indisponível";
+            showToast(`❌ ${name} indisponível`, "info");
+          }
+        }
+
+        updateMenuStats();
+      } catch (error) {
+        console.error("Erro ao alterar disponibilidade:", error);
+        showToast("Erro ao atualizar disponibilidade", "error");
+      }
+    });
+  });
+
+  // Toggles de opções
+  const optionToggles = document.querySelectorAll(".menu-option-toggle");
+
+  optionToggles.forEach((toggle) => {
+    toggle.addEventListener("click", async () => {
+      const category = toggle.dataset.category;
+      const name = toggle.dataset.name;
+      const option = toggle.dataset.option;
+      const isActive = toggle.classList.contains("active");
+      const newStatus = !isActive;
+
+      try {
+        await toggleMenuOptionAvailability(category, name, option, newStatus);
+
+        toggle.classList.toggle("active");
+        const optionItem = toggle.closest(".menu-option-item");
+
+        if (newStatus) {
+          optionItem.classList.remove("unavailable");
+          showToast(`✅ ${name} - ${option} disponível`, "success");
+        } else {
+          optionItem.classList.add("unavailable");
+          showToast(`❌ ${name} - ${option} indisponível`, "info");
+        }
+
+        updateMenuStats();
+      } catch (error) {
+        console.error("Erro ao alterar disponibilidade:", error);
+        showToast("Erro ao atualizar disponibilidade", "error");
+      }
+    });
+  });
+}
+
+function updateMenuStats() {
+  let availableCount = 0;
+  let unavailableCount = 0;
+
+  document.querySelectorAll(".menu-item").forEach((item) => {
+    if (item.classList.contains("unavailable")) {
+      unavailableCount++;
+    } else {
+      availableCount++;
+    }
+  });
+
+  document.getElementById("available-count").textContent = availableCount;
+  document.getElementById("unavailable-count").textContent = unavailableCount;
+}
+
+async function toggleMenuItemAvailability(category, name, isAvailable) {
+  if (!State.database) {
+    throw new Error("Firebase não conectado");
+  }
+
+  const itemKey = `${category}:${name}`;
+  await State.database.ref(`menuAvailability/${itemKey}`).set(isAvailable);
+
+  State.menuAvailability[itemKey] = isAvailable;
+  console.log(`📋 ${itemKey}: ${isAvailable ? "disponível" : "indisponível"}`);
+}
+
+async function toggleMenuOptionAvailability(
+  category,
+  name,
+  option,
+  isAvailable,
+) {
+  if (!State.database) {
+    throw new Error("Firebase não conectado");
+  }
+
+  const optionKey = `${category}:${name}:${option}`;
+  await State.database.ref(`menuAvailability/${optionKey}`).set(isAvailable);
+
+  State.menuAvailability[optionKey] = isAvailable;
+  console.log(
+    `📋 ${optionKey}: ${isAvailable ? "disponível" : "indisponível"}`,
+  );
+}
+
+// ================================
+// INGREDIENTS MANAGEMENT
+// ================================
+function loadIngredientsAvailability() {
+  if (!State.database) return;
+
+  State.database.ref("ingredientsAvailability").on("value", (snapshot) => {
+    State.ingredientsAvailability = snapshot.val() || {};
+    console.log(
+      "📦 Disponibilidade de ingredientes carregada:",
+      State.ingredientsAvailability,
+    );
+  });
+
+  State.database.ref("paidExtrasAvailability").on("value", (snapshot) => {
+    State.paidExtrasAvailability = snapshot.val() || {};
+    console.log(
+      "💰 Disponibilidade de adicionais pagos carregada:",
+      State.paidExtrasAvailability,
+    );
+  });
+}
+
+function extractIngredientsAndExtras() {
+  const ingredients = new Set();
+  const paidExtras = new Set();
+
+  if (!State.menuData) return { ingredients: [], paidExtras: [] };
+
+  Object.values(State.menuData).forEach((category) => {
+    category.forEach((item) => {
+      if (item.ingredientesPadrao) {
+        item.ingredientesPadrao.forEach((ing) => ingredients.add(ing));
+      }
+
+      if (item.ingredientesPorOpcao) {
+        Object.values(item.ingredientesPorOpcao).forEach((ings) => {
+          ings.forEach((ing) => ingredients.add(ing));
+        });
+      }
+
+      if (item.simplesIngredients) {
+        item.simplesIngredients.forEach((ing) => ingredients.add(ing));
+      }
+
+      if (item.duploIngredients) {
+        item.duploIngredients.forEach((ing) => ingredients.add(ing));
+      }
+
+      if (item.PromoIngredients) {
+        item.PromoIngredients.forEach((ing) => ingredients.add(ing));
+      }
+
+      if (item.adicionais) {
+        item.adicionais.forEach((add) => {
+          if (typeof add === "object" && add.nome) {
+            paidExtras.add(JSON.stringify(add));
+          }
+        });
+      }
+
+      if (item.paidExtras) {
+        item.paidExtras.forEach((extra) => {
+          if (extra.nome) {
+            paidExtras.add(JSON.stringify(extra));
+          }
+        });
+      }
+    });
+  });
+
+  const paidExtrasArray = Array.from(paidExtras).map((str) => JSON.parse(str));
+
+  return {
+    ingredients: Array.from(ingredients).sort(),
+    paidExtras: paidExtrasArray.sort((a, b) => a.nome.localeCompare(b.nome)),
+  };
+}
+
+async function loadIngredientsData() {
+  if (!State.menuData) {
+    await loadMenuData();
+  }
+
+  renderIngredientsTab();
+  setupIngredientsListeners();
+}
+
+function renderIngredientsTab() {
+  const activeTab =
+    document.querySelector("#ingredients-modal .tab-btn.active")?.dataset.tab ||
+    "ingredients";
+
+  const { ingredients, paidExtras } = extractIngredientsAndExtras();
+
+  if (activeTab === "ingredients") {
+    renderIngredientsList(ingredients);
+  } else {
+    renderPaidExtrasList(paidExtras);
+  }
+
+  updateIngredientsStats(ingredients, paidExtras);
+}
+
+function renderIngredientsList(ingredients) {
+  const container = document.getElementById("ingredients-content");
+  if (!container) return;
+
+  if (ingredients.length === 0) {
+    container.innerHTML = `
+      <div class="empty-ingredients">
+        <p>Nenhum ingrediente encontrado</p>
+      </div>
+    `;
+    return;
+  }
+
+  const html = `
+    <div class="ingredient-group">
+      <div class="ingredient-group-title">
+        🥬 Ingredientes
+        <span class="ingredient-group-count">(${ingredients.length} itens)</span>
+      </div>
+      ${ingredients
+        .map((ingredient) => {
+          const isAvailable =
+            State.ingredientsAvailability[ingredient] !== false;
+          return `
+            <div class="ingredient-item ${!isAvailable ? "unavailable" : ""}" data-ingredient="${ingredient}">
+              <div class="ingredient-info">
+                <div class="ingredient-icon">🥬</div>
+                <div class="ingredient-details">
+                  <div class="ingredient-name">${ingredient}</div>
+                  <div class="ingredient-type">Ingrediente padrão</div>
+                </div>
+              </div>
+              <span class="ingredient-status ${isAvailable ? "available" : "unavailable"}">
+                ${isAvailable ? "✅ Disponível" : "❌ Indisponível"}
+              </span>
+              <div class="ingredient-toggle ${isAvailable ? "active" : ""}" 
+                   data-type="ingredient" 
+                   data-name="${ingredient}">
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function renderPaidExtrasList(paidExtras) {
+  const container = document.getElementById("ingredients-content");
+  if (!container) return;
+
+  if (paidExtras.length === 0) {
+    container.innerHTML = `
+      <div class="empty-ingredients">
+        <p>Nenhum adicional pago encontrado</p>
+      </div>
+    `;
+    return;
+  }
+
+  const html = `
+    <div class="ingredient-group">
+      <div class="ingredient-group-title">
+        💰 Adicionais Pagos
+        <span class="ingredient-group-count">(${paidExtras.length} itens)</span>
+      </div>
+      ${paidExtras
+        .map((extra) => {
+          const isAvailable =
+            State.paidExtrasAvailability[extra.nome] !== false;
+          return `
+            <div class="ingredient-item ${!isAvailable ? "unavailable" : ""}" data-extra="${extra.nome}">
+              <div class="ingredient-info">
+                <div class="ingredient-icon">💰</div>
+                <div class="ingredient-details">
+                  <div class="ingredient-name">${extra.nome}</div>
+                  <div class="ingredient-price">+ R$ ${extra.preco.toFixed(2)}</div>
+                </div>
+              </div>
+              <span class="ingredient-status ${isAvailable ? "available" : "unavailable"}">
+                ${isAvailable ? "✅ Disponível" : "❌ Indisponível"}
+              </span>
+              <div class="ingredient-toggle ${isAvailable ? "active" : ""}" 
+                   data-type="paid-extra" 
+                   data-name="${extra.nome}">
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function updateIngredientsStats(ingredients, paidExtras) {
+  const activeTab =
+    document.querySelector(".tab-btn.active")?.dataset.tab || "ingredients";
+
+  let available = 0;
+  let unavailable = 0;
+
+  if (activeTab === "ingredients") {
+    ingredients.forEach((ing) => {
+      if (State.ingredientsAvailability[ing] !== false) {
+        available++;
+      } else {
+        unavailable++;
+      }
+    });
+  } else {
+    paidExtras.forEach((extra) => {
+      if (State.paidExtrasAvailability[extra.nome] !== false) {
+        available++;
+      } else {
+        unavailable++;
+      }
+    });
+  }
+
+  const availableEl = document.getElementById("ingredients-available-count");
+  const unavailableEl = document.getElementById(
+    "ingredients-unavailable-count",
+  );
+
+  if (availableEl) availableEl.textContent = available;
+  if (unavailableEl) unavailableEl.textContent = unavailable;
+}
+
+function setupIngredientsListeners() {
+  const tabButtons = document.querySelectorAll("#ingredients-modal .tab-btn");
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderIngredientsTab();
+    });
+  });
+
+  const searchInput = document.getElementById("ingredients-search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase();
+      const items = document.querySelectorAll(".ingredient-item");
+
+      items.forEach((item) => {
+        const name = item
+          .querySelector(".ingredient-name")
+          ?.textContent.toLowerCase();
+        if (name && name.includes(query)) {
+          item.style.display = "";
+        } else {
+          item.style.display = "none";
+        }
+      });
+    });
+  }
+
+  setupIngredientToggles();
+
+  const closeBtn = document.getElementById("close-ingredients-modal");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      const modal = document.getElementById("ingredients-modal");
+      const overlay = document.getElementById("overlay");
+      if (modal) modal.classList.remove("show");
+      if (overlay) overlay.classList.remove("show");
+    });
+  }
+}
+
+function setupIngredientToggles() {
+  const toggles = document.querySelectorAll(".ingredient-toggle");
+
+  toggles.forEach((toggle) => {
+    toggle.addEventListener("click", async () => {
+      const type = toggle.dataset.type;
+      const name = toggle.dataset.name;
+      const isActive = toggle.classList.contains("active");
+      const newStatus = !isActive;
+
+      try {
+        if (type === "ingredient") {
+          await toggleIngredientAvailability(name, newStatus);
+        } else if (type === "paid-extra") {
+          await togglePaidExtraAvailability(name, newStatus);
+        }
+
+        toggle.classList.toggle("active");
+        const item = toggle.closest(".ingredient-item");
+        const status = item.querySelector(".ingredient-status");
+
+        if (newStatus) {
+          item.classList.remove("unavailable");
+          status.classList.remove("unavailable");
+          status.classList.add("available");
+          status.textContent = "✅ Disponível";
+          showToast(`✅ ${name} disponível`, "success");
+        } else {
+          item.classList.add("unavailable");
+          status.classList.add("unavailable");
+          status.classList.remove("available");
+          status.textContent = "❌ Indisponível";
+          showToast(`❌ ${name} indisponível`, "info");
+        }
+
+        const { ingredients, paidExtras } = extractIngredientsAndExtras();
+        updateIngredientsStats(ingredients, paidExtras);
+      } catch (error) {
+        console.error("Erro ao alterar disponibilidade:", error);
+        showToast("Erro ao atualizar disponibilidade", "error");
+      }
+    });
+  });
+}
+
+async function toggleIngredientAvailability(ingredient, isAvailable) {
+  if (!State.database) {
+    throw new Error("Firebase não conectado");
+  }
+
+  await State.database
+    .ref(`ingredientsAvailability/${ingredient}`)
+    .set(isAvailable);
+
+  State.ingredientsAvailability[ingredient] = isAvailable;
+  console.log(
+    `🥬 ${ingredient}: ${isAvailable ? "disponível" : "indisponível"}`,
+  );
+}
+
+async function togglePaidExtraAvailability(extra, isAvailable) {
+  if (!State.database) {
+    throw new Error("Firebase não conectado");
+  }
+
+  await State.database.ref(`paidExtrasAvailability/${extra}`).set(isAvailable);
+
+  State.paidExtrasAvailability[extra] = isAvailable;
+  console.log(`💰 ${extra}: ${isAvailable ? "disponível" : "indisponível"}`);
+}
+
+// ================================
+// INITIALIZATION
+// ================================
 (function () {
   function init() {
     if (document.readyState === "loading") {

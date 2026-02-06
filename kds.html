@@ -41,6 +41,10 @@
           <span>📋</span>
           <span>Gestão Cardápio</span>
         </button>
+        <button class="header-btn" id="btn-ingredients-management">
+          <span>🥬</span>
+          <span>Gestão Insumos</span>
+        </button>
         <button class="header-btn" id="btn-history">
           <span>📜</span>
           <span>Histórico</span>
@@ -130,6 +134,48 @@
 
         <div class="menu-categories" id="menu-categories">
           <!-- Categorias serão carregadas aqui -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Gestão de Insumos -->
+    <div class="modal" id="ingredients-modal">
+      <div class="modal-content ingredients-management">
+        <div class="modal-header">
+          <h2>🥬 Gestão de Insumos</h2>
+          <button class="btn-close" id="close-ingredients-modal">&times;</button>
+        </div>
+
+        <div class="ingredients-search">
+          <input
+            type="text"
+            id="ingredients-search-input"
+            placeholder="Buscar ingrediente ou adicional..."
+          />
+        </div>
+
+        <div class="ingredients-stats">
+          <div class="stat-card">
+            <span class="stat-label">Disponíveis</span>
+            <span class="stat-value available" id="ingredients-available-count">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Indisponíveis</span>
+            <span class="stat-value unavailable" id="ingredients-unavailable-count">0</span>
+          </div>
+        </div>
+
+        <div class="ingredients-tabs">
+          <button class="tab-btn active" data-tab="ingredients">
+            Ingredientes
+          </button>
+          <button class="tab-btn" data-tab="paid-extras">
+            Adicionais Pagos
+          </button>
+        </div>
+
+        <div class="ingredients-content" id="ingredients-content">
+          <!-- Ingredientes e adicionais serão carregados aqui -->
         </div>
       </div>
     </div>

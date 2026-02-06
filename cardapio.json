@@ -17,7 +17,7 @@
         "Alface",
         "Tomate",
         "Cebola caramelizada",
-        "Molho",
+        "Molho artesanal",
         "Cheddar fatiado"
       ],
       "paidExtras": [
@@ -256,11 +256,11 @@
       "burgers": ["1º Cremoso", "2º Cremoso"],
       "PromoIngredients": [
         "Cheddar",
-        "Cream cheese",
+        "Cream Cheese",
         "Alface",
         "Tomate",
         "Cebola caramelizada",
-        "Molho da casa"
+        "Molho artesanal"
       ],
       "paidExtras": [
         {
@@ -294,11 +294,10 @@
       "combo": true,
       "burgers": ["1º Smash Duplo", "2º Smash Duplo"],
       "duploIngredients": [
-        "2 carnes smash",
         "Cheddar fatiado",
         "Alface",
         "Tomate",
-        "Molho"
+        "Molho artesanal"
       ],
       "paidExtras": [
         {
@@ -332,11 +331,10 @@
       "combo": true,
       "burgers": ["1º Calabreso", "2º Calabreso"],
       "duploIngredients": [
-        "Pão brioche",
         "Calabresa artesanal",
         "Queijo",
         "Cebola",
-        "Molho"
+        "Molho artesanal"
       ],
       "paidExtras": [
         {
@@ -370,11 +368,12 @@
       "combo": true,
       "burgers": ["1º Calabreso Duplo", "2º Calabreso Duplo"],
       "duploIngredients": [
-        "Pão brioche",
-        "Calabresa artesanal dupla",
-        "Queijo",
-        "Cebola",
-        "Molho"
+        "Calabresa",
+        "Alface",
+        "Tomate",
+        "Cheddar Fatiado",
+        "Cebola Caramelizada",
+        "Molho artesanal"
       ],
       "paidExtras": [
         {
@@ -777,9 +776,9 @@
       "ingredientesPadrao": [
         "Alface",
         "Tomate",
+        "Cebola caramelizada",
         "Molho artesanal",
-        "Ovo",
-        "Cebola caramelizada"
+        "Ovo"
       ],
       "adicionais": [
         {
