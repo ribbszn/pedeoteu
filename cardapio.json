@@ -21,26 +21,11 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
       ]
     },
     {
@@ -57,26 +42,11 @@
         "Molho artesanal"
       ],
       "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
       ]
     },
     {
@@ -98,26 +68,11 @@
         "Molho artesanal"
       ],
       "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
       ]
     },
     {
@@ -141,26 +96,11 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
       ]
     },
     {
@@ -179,26 +119,11 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
       ]
     },
     {
@@ -222,6 +147,53 @@
         "Cheddar fatiado"
       ],
       "paidExtras": [
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
+      ]
+    },
+    {
+      "nome": "3 Duplos + Batata G",
+      "descricao": "Compõe 3 smash duplos, junto a Batata G com cheddar e bacon!.",
+      "precoBase": [60],
+      "opcoes": ["Promo"],
+      "img": "./img/3duplosbatata.png",
+      "combo": true,
+      "burgers": ["1º Smash Duplo", "2º Smash Duplo", "3º Smash Duplo"],
+      "duploIngredients": [
+        "Alface",
+        "Tomate",
+        "Cebola caramelizada",
+        "Molho",
+        "Cheddar fatiado"
+      ],
+      "paidExtras": [
+        { "nome": "Bacon", "preco": 4 },
+        { "nome": "Carne Smash", "preco": 5 },
+        { "nome": "Ovo", "preco": 2 },
+        { "nome": "Cream Cheese", "preco": 3 },
+        { "nome": "Calabresa", "preco": 3 }
+      ]
+    }
+  ],
+  "Clones": [
+    {
+      "nome": "Clone (2 Smash Duplos)",
+      "descricao": "Campeão de vendas! Dois Smash Duplos.",
+      "img": "./img/duploclone.png",
+      "precoBase": [30],
+      "opcoes": ["Promo"],
+      "combo": true,
+      "burgers": ["1º Smash Duplo", "2º Smash Duplo"],
+      "duploIngredients": [
+        "Cheddar fatiado",
+        "Alface",
+        "Tomate",
+        "Molho artesanal"
+      ],
+      "paidExtras": [
         {
           "nome": "Bacon",
           "preco": 4
@@ -243,9 +215,7 @@
           "preco": 3
         }
       ]
-    }
-  ],
-  "Clones": [
+    },
     {
       "nome": "Clone (2 Cremosos)",
       "descricao": "Dois burgers cremosos com cream cheese.",
@@ -285,43 +255,7 @@
         }
       ]
     },
-    {
-      "nome": "Clone (2 Smash Duplos)",
-      "descricao": "Campeão de vendas! Dois Smash Duplos.",
-      "img": "./img/duploclone.png",
-      "precoBase": [30],
-      "opcoes": ["Promo"],
-      "combo": true,
-      "burgers": ["1º Smash Duplo", "2º Smash Duplo"],
-      "duploIngredients": [
-        "Cheddar fatiado",
-        "Alface",
-        "Tomate",
-        "Molho artesanal"
-      ],
-      "paidExtras": [
-        {
-          "nome": "Bacon",
-          "preco": 4
-        },
-        {
-          "nome": "Carne Smash",
-          "preco": 5
-        },
-        {
-          "nome": "Ovo",
-          "preco": 2
-        },
-        {
-          "nome": "Cream Cheese",
-          "preco": 3
-        },
-        {
-          "nome": "Calabresa",
-          "preco": 3
-        }
-      ]
-    },
+
     {
       "nome": "Clone (2 Calabresos)",
       "descricao": "Famoso X-Calabresa artesanal.",
@@ -704,10 +638,10 @@
       "ingredientesPadrao": [
         "Alface",
         "Tomate",
+        "Cebola caramelizada",
         "Molho artesanal",
         "Cheddar fatiado",
-        "Cream cheese",
-        "Cebola caramelizada"
+        "Cream cheese"
       ],
       "adicionais": [
         {
