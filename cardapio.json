@@ -441,7 +441,7 @@
       "precoBase": [29],
       "combo": true,
       "burgers": ["Smash Duplo"],
-      "duploIngredients": [
+      "DuploIngredients": [
         "Alface",
         "Tomate",
         "Cebola caramelizada",
@@ -864,7 +864,7 @@
   ],
   "Bebidas": [
     {
-      "nome": "Refrigerantes",
+      "nome": "Refri",
       "opcoes": [
         "Coca Pitchulinha",
         "Coca Lata",
@@ -903,7 +903,7 @@
       "precoBase": [12, 12, 12, 14, 14]
     },
     {
-      "nome": "Sucos",
+      "nome": "Suco",
       "opcoes": ["Cajá 300ml", "Maracujá 300ml"],
       "precoBase": [5, 5],
       "descricao": "Suco de polpa da fruta.",

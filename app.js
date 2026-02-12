@@ -19,8 +19,9 @@ const CONFIG = {
 // FIREBASE INITIALIZATION
 // ================================
 let database = null;
+let auth = null;
 
-function initFirebase() {
+async function initFirebase() {
   try {
     if (typeof firebase === "undefined") {
       console.warn(
@@ -32,8 +33,13 @@ function initFirebase() {
     if (!firebase.apps.length) {
       firebase.initializeApp(CONFIG.firebaseConfig);
     }
+
     database = firebase.database();
-    console.log("✅ Firebase inicializado com sucesso");
+    auth = firebase.auth();
+
+    // Fazer login anônimo para permitir escrita no Firebase
+    await auth.signInAnonymously();
+    console.log("✅ Firebase inicializado e autenticado anonimamente");
   } catch (error) {
     console.error("❌ Erro ao inicializar Firebase:", error);
   }

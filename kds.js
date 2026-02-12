@@ -155,11 +155,15 @@ function initFirebase() {
       return;
     }
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(CONFIG.firebaseConfig);
+    // Use database from firebase-init-auth.js
+    State.database = window.firebaseDatabase;
+
+    if (!State.database) {
+      showToast("⚠️ Firebase Database não inicializado", "error");
+      updateStatus(false);
+      return;
     }
 
-    State.database = firebase.database();
     updateStatus(true);
     console.log("✅ Firebase inicializado");
 
@@ -2029,20 +2033,33 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
 // ================================
 // INITIALIZATION
 // ================================
+
+// Expose initKDS to be called after authentication
+window.initKDS = function () {
+  initFirebase();
+  initUI();
+  setTimeout(initInProgressWidget, 1500);
+  console.log("✅ KDS inicializado após autenticação");
+};
+
 (function () {
   function init() {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", function () {
-        initFirebase();
-        initUI();
-        setTimeout(initInProgressWidget, 1500);
-      });
-    } else {
-      initFirebase();
-      initUI();
-      setTimeout(initInProgressWidget, 1500);
+    // Check if user is already authenticated
+    if (window.firebaseAuth) {
+      const user = window.firebaseAuth.currentUser;
+      if (user) {
+        // User is already logged in, initialize immediately
+        window.initKDS();
+      } else {
+        console.log("🔐 Aguardando autenticação...");
+        // initKDS will be called by firebase-init-auth.js after successful login
+      }
     }
   }
 
-  init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
