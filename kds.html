@@ -202,8 +202,8 @@
       </div>
     </div>
 
-    <!-- Modal Autenticação -->
-    <div class="auth-modal" id="auth-modal">
+    <!-- Modal Autenticação - SEMPRE VISÍVEL INICIALMENTE -->
+    <div class="auth-modal" id="auth-modal" style="display: flex">
       <div class="auth-modal-content">
         <div class="auth-lock-icon">🔒</div>
         <h2 class="auth-title">Insira sua senha de 6 dígitos</h2>
@@ -213,36 +213,48 @@
             class="auth-pin-digit"
             maxlength="1"
             data-index="0"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
           <input
             type="text"
             class="auth-pin-digit"
             maxlength="1"
             data-index="1"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
           <input
             type="text"
             class="auth-pin-digit"
             maxlength="1"
             data-index="2"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
           <input
             type="text"
             class="auth-pin-digit"
             maxlength="1"
             data-index="3"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
           <input
             type="text"
             class="auth-pin-digit"
             maxlength="1"
             data-index="4"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
           <input
             type="text"
             class="auth-pin-digit"
             maxlength="1"
             data-index="5"
+            inputmode="numeric"
+            pattern="[0-9]"
           />
         </div>
         <div class="auth-error" id="auth-error"></div>

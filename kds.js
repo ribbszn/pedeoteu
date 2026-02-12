@@ -35,6 +35,9 @@ class AuthManager {
     this.pinDigits.forEach((input, index) => {
       // Auto-focus no próximo campo
       input.addEventListener("input", (e) => {
+        // Permitir apenas números
+        e.target.value = e.target.value.replace(/[^0-9]/g, "");
+
         if (e.target.value.length === 1) {
           input.classList.add("filled");
           if (index < this.pinDigits.length - 1) {
@@ -55,9 +58,9 @@ class AuthManager {
         }
       });
 
-      // Permitir apenas números
-      input.addEventListener("beforeinput", (e) => {
-        if (e.data && !/^\d$/.test(e.data)) {
+      // Prevenir input não numérico
+      input.addEventListener("keypress", (e) => {
+        if (!/^\d$/.test(e.key)) {
           e.preventDefault();
         }
       });
@@ -70,8 +73,12 @@ class AuthManager {
       });
     });
 
-    // Auto-focus no primeiro campo
-    this.pinDigits[0].focus();
+    // Auto-focus no primeiro campo após um pequeno delay
+    setTimeout(() => {
+      if (this.pinDigits[0]) {
+        this.pinDigits[0].focus();
+      }
+    }, 300);
   }
 
   getPin() {
@@ -131,11 +138,28 @@ class AuthManager {
   }
 
   showAuthModal() {
-    this.modal.classList.remove("hidden");
+    if (this.modal) {
+      this.modal.classList.remove("hidden");
+      this.modal.style.display = "flex";
+      this.modal.style.opacity = "1";
+      this.modal.style.visibility = "visible";
+
+      // Garantir foco no primeiro campo
+      setTimeout(() => {
+        if (this.pinDigits[0]) {
+          this.pinDigits[0].focus();
+        }
+      }, 300);
+    }
   }
 
   hideAuthModal() {
-    this.modal.classList.add("hidden");
+    if (this.modal) {
+      this.modal.classList.add("hidden");
+      this.modal.style.display = "none";
+      this.modal.style.opacity = "0";
+      this.modal.style.visibility = "hidden";
+    }
     // Iniciar aplicação após autenticação bem-sucedida
     if (window.kdsApp) {
       window.kdsApp.init();
