@@ -162,6 +162,24 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Melhorar scroll em mobile */
+  -webkit-overflow-scrolling: touch;
+  /* Prevenir zoom em inputs no iOS */
+  touch-action: manipulation;
+}
+
+/* Prevenir zoom em inputs no iOS mantendo tamanho mínimo */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Melhorar scroll suave */
+html {
+  scroll-behavior: smooth;
 }
 
 button {
@@ -1299,67 +1317,422 @@ button {
 /* ================================
    RESPONSIVE
    ================================ */
-@media (max-width: 1200px) {
-  .kds-main {
-    grid-template-columns: 1fr;
+/* ================================
+   RESPONSIVE DESIGN - MOBILE FIRST
+   ================================ */
+
+/* Base mobile - aplica para TODOS os dispositivos mobile */
+@media (max-width: 1024px) {
+  /* Ajustar variáveis para mobile */
+  :root {
+    --header-height: auto;
+    --spacing: 10px;
+    --border-radius: 8px;
   }
 
-  .order-column {
-    height: auto;
-    min-height: 500px;
+  /* Body */
+  body {
+    font-size: 14px;
   }
-}
 
-@media (max-width: 768px) {
+  /* Header - layout vertical para mobile */
   .kds-header {
-    flex-direction: column;
-    height: auto;
-    padding: 15px;
-    gap: 15px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: auto !important;
+    min-height: unset !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: unset !important;
+    padding: 10px !important;
+    gap: 10px !important;
+    z-index: 1000;
   }
 
-  .header-left,
+  .header-left {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-left h1 {
+    font-size: 1.1rem !important;
+    white-space: nowrap;
+  }
+
+  .status-indicator {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* Header Center - Widget Em Preparo */
+  .header-center {
+    width: 100%;
+    order: 3;
+  }
+
+  .in-progress-widget {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .in-progress-header {
+    padding: 8px 10px;
+  }
+
+  .in-progress-icon {
+    font-size: 1.2rem;
+  }
+
+  .in-progress-label {
+    font-size: 0.75rem;
+  }
+
+  .in-progress-count {
+    font-size: 1rem;
+  }
+
+  .in-progress-dropdown {
+    max-height: 200px;
+  }
+
+  .in-progress-list {
+    gap: 8px;
+  }
+
+  .in-progress-item {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+
+  /* Header Right - Botões */
   .header-right {
     width: 100%;
-    justify-content: space-between;
-  }
-
-  .header-right {
+    display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px;
+    order: 2;
   }
 
   .header-btn {
-    flex: 1;
-    min-width: 140px;
+    flex: 1 1 calc(50% - 3px);
+    min-width: unset !important;
+    padding: 8px 6px !important;
+    font-size: 0.7rem !important;
+    gap: 4px;
   }
 
+  .header-btn span:first-child {
+    font-size: 1rem;
+  }
+
+  .header-btn span:last-child {
+    font-size: 0.7rem;
+  }
+
+  /* Main Content */
   .kds-main {
-    margin-top: 140px;
+    margin-top: 180px !important; /* Espaço para header móvel */
+    padding: 10px !important;
+    gap: 12px !important;
+    display: grid;
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+
+  /* Colunas de pedidos */
+  .order-column {
+    height: auto !important;
+    min-height: 400px;
+  }
+
+  .column-header {
+    padding: 10px 12px !important;
+  }
+
+  .column-header h2 {
+    font-size: 1rem !important;
+  }
+
+  .order-count {
+    min-width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 0.8rem !important;
+    padding: 0 8px;
+  }
+
+  .orders-container {
+    padding: 10px !important;
+    gap: 12px !important;
+  }
+
+  /* Order Cards */
+  .order-card {
+    padding: 10px !important;
+    margin-bottom: 10px;
+  }
+
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .order-number {
+    font-size: 1.2rem !important;
+  }
+
+  .order-time {
+    font-size: 0.75rem;
+    align-self: flex-end;
+  }
+
+  .order-badges {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .order-badge {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+  }
+
+  .order-timer {
+    font-size: 1rem !important;
+    padding: 6px 10px !important;
+  }
+
+  .order-customer {
+    font-size: 0.9rem;
+  }
+
+  .order-info {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .info-item {
+    font-size: 0.75rem !important;
+    padding: 4px 8px;
+  }
+
+  /* Items do pedido */
+  .order-items {
+    gap: 8px;
+  }
+
+  .item-card {
+    padding: 8px !important;
+  }
+
+  .item-name {
+    font-size: 0.85rem !important;
+  }
+
+  .item-qty {
+    font-size: 0.85rem;
+  }
+
+  .item-detail {
+    font-size: 0.7rem !important;
+    margin-left: 0;
+  }
+
+  .item-obs {
+    font-size: 0.7rem;
+    margin-left: 10px;
+  }
+
+  /* Order Actions */
+  .order-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-action {
+    width: 100%;
+    padding: 10px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .order-total {
+    font-size: 1.1rem !important;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 100% !important;
+    right: -100% !important;
+    max-width: 100% !important;
+  }
+
+  .sidebar.show {
+    right: 0 !important;
+  }
+
+  .sidebar-header {
     padding: 15px;
   }
 
-  .sidebar {
-    width: 100%;
-    right: -100%;
+  .sidebar-header h2 {
+    font-size: 1.1rem;
   }
 
+  .sidebar-content {
+    padding: 15px;
+  }
+
+  .history-card {
+    padding: 10px;
+  }
+
+  .history-filters {
+    gap: 6px;
+    padding: 10px 15px;
+  }
+
+  .filter-btn {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+  }
+
+  /* Modais */
   .modal-content {
-    max-width: 95%;
+    width: 95% !important;
+    max-width: 95% !important;
+    max-height: 85vh !important;
+    margin: 20px auto !important;
+    padding: 12px !important;
+  }
+
+  .modal-header {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem !important;
+  }
+
+  .btn-close {
+    width: 32px;
+    height: 32px;
+    font-size: 1.5rem;
+  }
+
+  .modal-body {
+    max-height: calc(85vh - 100px) !important;
+    padding: 10px;
+  }
+
+  /* Modal Auth */
+  .auth-modal-content {
+    width: 92% !important;
+    max-width: 400px !important;
+    padding: 35px 20px !important;
+  }
+
+  .auth-lock-icon {
+    font-size: 50px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .auth-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 25px !important;
+  }
+
+  .auth-pin-container {
+    gap: 8px !important;
+    justify-content: center;
+  }
+
+  .auth-pin-digit {
+    width: 45px !important;
+    height: 55px !important;
+    font-size: 24px !important;
+    border-width: 2px;
+  }
+
+  .auth-error {
+    font-size: 0.85rem;
+  }
+
+  /* Gestão de Cardápio */
+  .menu-management {
+    padding: 10px;
+  }
+
+  .menu-search input {
+    font-size: 0.85rem;
+    padding: 10px;
   }
 
   .menu-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 15px;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .stat-value {
+    font-size: 1.3rem;
+  }
+
+  .menu-categories {
+    gap: 12px;
+  }
+
+  .category-section {
+    margin-bottom: 15px;
+  }
+
+  .category-title {
+    font-size: 1rem;
+    padding: 10px;
   }
 
   .menu-item {
     flex-direction: column;
-    align-items: flex-start;
+    padding: 10px !important;
+    gap: 10px;
   }
 
   .menu-item-header {
     width: 100%;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+  }
+
+  .menu-item-info {
+    width: 100%;
+  }
+
+  .menu-item-name {
+    font-size: 0.9rem !important;
+  }
+
+  .menu-item-desc {
+    font-size: 0.75rem;
   }
 
   .menu-item-controls {
@@ -1367,46 +1740,395 @@ button {
     justify-content: space-between;
   }
 
+  .menu-item-status {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .menu-item-toggle {
+    width: 48px !important;
+    height: 26px !important;
+  }
+
+  .menu-item-toggle::before {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
   .menu-item-price-editor {
     width: 100%;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .price-input-wrapper {
-    flex: 1;
-    min-width: 100px;
+    width: 100%;
+  }
+
+  .price-input-wrapper label {
+    font-size: 0.75rem;
   }
 
   .price-input {
-    width: 100%;
+    width: 100% !important;
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+
+  .price-actions {
+    gap: 6px;
+  }
+
+  .btn-price {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+  }
+
+  /* Gestão de Ingredientes */
+  .ingredients-management {
+    padding: 10px;
+  }
+
+  .ingredients-search input {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  .ingredients-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ingredients-tabs {
+    gap: 6px;
+    margin-bottom: 15px;
+  }
+
+  .tab-btn {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+
+  .ingredients-content {
+    gap: 10px;
+  }
+
+  .ingredient-group {
+    margin-bottom: 15px;
+  }
+
+  .ingredient-group-title {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+
+  .ingredient-item {
+    padding: 10px !important;
+    gap: 10px;
+  }
+
+  .ingredient-icon {
+    font-size: 1.2rem;
+  }
+
+  .ingredient-name {
+    font-size: 0.85rem !important;
+  }
+
+  .ingredient-price {
+    font-size: 0.75rem;
+  }
+
+  .ingredient-status {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+  }
+
+  .ingredient-toggle {
+    width: 48px !important;
+    height: 26px !important;
+  }
+
+  /* Toast */
+  .toast-container {
+    bottom: 15px;
+    left: 10px;
+    right: 10px;
+  }
+
+  .toast {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+  }
+
+  /* Empty States */
+  .empty-state {
+    padding: 30px 15px;
+    font-size: 0.85rem;
+  }
+
+  .empty-state-inline {
+    padding: 15px;
+    font-size: 0.75rem;
   }
 }
 
+/* Tablets em landscape */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .kds-main {
+    margin-top: 120px !important;
+  }
+
+  .modal-content {
+    max-height: 80vh !important;
+  }
+}
+
+/* Smartphones específicos - iPhone e Android */
 @media (max-width: 480px) {
   .header-left h1 {
-    font-size: 1.3rem;
+    font-size: 0.95rem !important;
+  }
+
+  .status-indicator {
+    font-size: 0.65rem;
   }
 
   .header-btn {
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: 6px 4px !important;
+    font-size: 0.65rem !important;
   }
 
   .header-btn span:first-child {
-    font-size: 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Esconder texto dos botões em telas muito pequenas */
+  .header-btn span:last-child {
+    display: none;
+  }
+
+  .header-btn {
+    min-width: 42px;
+    justify-content: center;
+  }
+
+  .kds-main {
+    margin-top: 140px !important;
+  }
+
+  .order-number {
+    font-size: 1.1rem !important;
+  }
+
+  .order-timer {
+    font-size: 0.9rem !important;
+  }
+
+  .auth-pin-digit {
+    width: 40px !important;
+    height: 50px !important;
+    font-size: 22px !important;
+    gap: 6px !important;
+  }
+
+  .auth-pin-container {
+    gap: 6px !important;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+}
+
+/* iPhone específicos */
+@media (max-width: 428px) {
+  /* iPhone 14 Plus, 13 Pro Max, 12 Pro Max */
+  body {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 414px) {
+  /* iPhone 11 Pro Max, XS Max, XR, 8 Plus */
+  .auth-modal-content {
+    padding: 30px 18px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  /* iPhone 14, 13, 12 */
+  .header-left h1 {
+    font-size: 0.9rem !important;
+  }
+
+  .kds-main {
+    margin-top: 130px !important;
+  }
+}
+
+@media (max-width: 375px) {
+  /* iPhone SE, 13 Mini, 12 Mini, X, XS, 11 Pro */
+  .auth-pin-digit {
+    width: 38px !important;
+    height: 48px !important;
+    font-size: 20px !important;
+  }
+
+  .auth-pin-container {
+    gap: 5px !important;
+  }
+
+  .header-left h1 {
+    font-size: 0.85rem !important;
   }
 
   .order-card {
-    padding: 12px;
+    padding: 8px !important;
   }
 
-  .order-actions {
-    flex-direction: column;
+  .btn-action {
+    padding: 8px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Androids pequenos */
+  .auth-pin-digit {
+    width: 35px !important;
+    height: 45px !important;
+    font-size: 18px !important;
   }
 
-  .price-input {
-    width: 80px;
+  .auth-pin-container {
+    gap: 4px !important;
+  }
+
+  .header-left h1 {
+    font-size: 0.8rem !important;
+  }
+
+  .kds-main {
+    margin-top: 120px !important;
+    padding: 8px !important;
+  }
+}
+
+/* Landscape em smartphones */
+@media (max-height: 500px) and (orientation: landscape) {
+  .kds-header {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+
+  .header-btn {
+    padding: 5px 6px !important;
+  }
+
+  .kds-main {
+    margin-top: 100px !important;
+    padding: 8px !important;
+  }
+
+  .modal-content {
+    max-height: 90vh !important;
+    margin: 10px auto !important;
+  }
+
+  .auth-modal-content {
+    padding: 20px 18px !important;
+  }
+
+  .auth-lock-icon {
+    font-size: 40px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .auth-title {
+    font-size: 1rem !important;
+    margin-bottom: 15px !important;
+  }
+
+  .auth-pin-digit {
+    width: 38px !important;
+    height: 45px !important;
+    font-size: 20px !important;
+  }
+
+  .order-column {
+    min-height: 300px;
+  }
+}
+
+/* Safe area para iPhones com notch (X, 11, 12, 13, 14, 15) */
+@supports (padding: max(0px)) {
+  .kds-header {
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+    padding-top: max(10px, env(safe-area-inset-top)) !important;
+  }
+
+  .kds-main {
+    padding-left: max(10px, env(safe-area-inset-left)) !important;
+    padding-right: max(10px, env(safe-area-inset-right)) !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .sidebar {
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+
+  .toast-container {
+    bottom: max(15px, env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+  }
+
+  .modal-content {
+    margin-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Touch optimizations para mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumentar área de toque em dispositivos touch */
+  .header-btn {
+    min-height: 44px;
+  }
+
+  .btn-action {
+    min-height: 44px;
+  }
+
+  .filter-btn {
+    min-height: 40px;
+  }
+
+  .menu-item-toggle {
+    min-width: 50px;
+    min-height: 30px;
+  }
+
+  .ingredient-toggle {
+    min-width: 50px;
+    min-height: 30px;
+  }
+
+  /* Desabilitar hover effects em touch */
+  .order-card:hover {
+    transform: none;
+  }
+
+  .header-btn:hover {
+    transform: none;
+  }
+
+  .in-progress-widget:hover {
+    transform: none;
   }
 }
 
