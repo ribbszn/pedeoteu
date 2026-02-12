@@ -2,20 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KDS - Ribbs ZN</title>
     <link rel="stylesheet" href="kds.css" />
   </head>
-  <body class="locked">
+  <body>
     <!-- Header -->
     <header class="kds-header">
       <div class="header-left">
@@ -211,65 +202,6 @@
       </div>
     </div>
 
-    <!-- Modal Autenticação - SEMPRE VISÍVEL INICIALMENTE -->
-    <div class="auth-modal" id="auth-modal" style="display: flex">
-      <div class="auth-modal-content">
-        <div class="auth-lock-icon">🔒</div>
-        <h2 class="auth-title">Insira sua senha de 6 dígitos</h2>
-        <div class="auth-pin-container">
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="0"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="1"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="2"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="3"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="4"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-          <input
-            type="text"
-            class="auth-pin-digit"
-            maxlength="1"
-            data-index="5"
-            inputmode="numeric"
-            pattern="[0-9]"
-          />
-        </div>
-        <div class="auth-error" id="auth-error"></div>
-      </div>
-    </div>
-
     <!-- Overlay -->
     <div class="overlay" id="overlay"></div>
 
@@ -292,7 +224,6 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
     <!-- KDS Script -->
     <script src="kds.js"></script>

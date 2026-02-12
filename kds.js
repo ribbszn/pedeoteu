@@ -12,167 +12,7 @@ const CONFIG = {
     appId: "1:970185571294:web:25e8552bd72d852283bb4f",
   },
   menuDataUrl: "cardapio.json",
-  auth: {
-    email: "rbnacena@gmail.com",
-    // A senha será inserida pelo usuário
-  },
 };
-
-// ================================
-// AUTHENTICATION
-// ================================
-class AuthManager {
-  constructor() {
-    this.modal = document.getElementById("auth-modal");
-    this.pinDigits = document.querySelectorAll(".auth-pin-digit");
-    this.errorDiv = document.getElementById("auth-error");
-    this.isAuthenticating = false;
-    this.setupPinInputs();
-    this.showAuthModal();
-  }
-
-  setupPinInputs() {
-    this.pinDigits.forEach((input, index) => {
-      // Auto-focus no próximo campo
-      input.addEventListener("input", (e) => {
-        // Permitir apenas números
-        e.target.value = e.target.value.replace(/[^0-9]/g, "");
-
-        if (e.target.value.length === 1) {
-          input.classList.add("filled");
-          if (index < this.pinDigits.length - 1) {
-            this.pinDigits[index + 1].focus();
-          } else {
-            // Último dígito preenchido, tentar autenticar
-            this.attemptAuth();
-          }
-        }
-      });
-
-      // Permitir backspace para voltar
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace" && !e.target.value && index > 0) {
-          this.pinDigits[index - 1].focus();
-          this.pinDigits[index - 1].value = "";
-          this.pinDigits[index - 1].classList.remove("filled");
-        }
-      });
-
-      // Prevenir input não numérico
-      input.addEventListener("keypress", (e) => {
-        if (!/^\d$/.test(e.key)) {
-          e.preventDefault();
-        }
-      });
-
-      // Remover classe filled quando limpar
-      input.addEventListener("input", (e) => {
-        if (!e.target.value) {
-          input.classList.remove("filled");
-        }
-      });
-    });
-
-    // Auto-focus no primeiro campo após um pequeno delay
-    setTimeout(() => {
-      if (this.pinDigits[0]) {
-        this.pinDigits[0].focus();
-      }
-    }, 300);
-  }
-
-  getPin() {
-    return Array.from(this.pinDigits)
-      .map((input) => input.value)
-      .join("");
-  }
-
-  clearPin() {
-    this.pinDigits.forEach((input) => {
-      input.value = "";
-      input.classList.remove("filled", "error");
-    });
-    this.pinDigits[0].focus();
-  }
-
-  showError(message) {
-    this.errorDiv.textContent = message;
-    this.pinDigits.forEach((input) => input.classList.add("error"));
-
-    setTimeout(() => {
-      this.clearPin();
-      this.errorDiv.textContent = "";
-    }, 1500);
-  }
-
-  async attemptAuth() {
-    if (this.isAuthenticating) return;
-
-    const pin = this.getPin();
-    if (pin.length !== 6) return;
-
-    this.isAuthenticating = true;
-
-    try {
-      // Fazer login com email e senha (PIN)
-      await firebase.auth().signInWithEmailAndPassword(CONFIG.auth.email, pin);
-
-      // Sucesso! Ocultar modal
-      this.hideAuthModal();
-    } catch (error) {
-      console.error("Erro de autenticação:", error);
-
-      if (
-        error.code === "auth/wrong-password" ||
-        error.code === "auth/user-not-found"
-      ) {
-        this.showError("Senha incorreta");
-      } else if (error.code === "auth/too-many-requests") {
-        this.showError("Muitas tentativas. Tente mais tarde.");
-      } else {
-        this.showError("Erro ao autenticar");
-      }
-
-      this.isAuthenticating = false;
-    }
-  }
-
-  showAuthModal() {
-    // Bloquear o body
-    document.body.classList.add("locked");
-
-    if (this.modal) {
-      this.modal.classList.remove("hidden");
-      this.modal.style.display = "flex";
-      this.modal.style.opacity = "1";
-      this.modal.style.visibility = "visible";
-
-      // Garantir foco no primeiro campo
-      setTimeout(() => {
-        if (this.pinDigits[0]) {
-          this.pinDigits[0].focus();
-        }
-      }, 300);
-    }
-  }
-
-  hideAuthModal() {
-    if (this.modal) {
-      this.modal.classList.add("hidden");
-      this.modal.style.display = "none";
-      this.modal.style.opacity = "0";
-      this.modal.style.visibility = "hidden";
-    }
-
-    // Desbloquear o body
-    document.body.classList.remove("locked");
-
-    // Iniciar aplicação após autenticação bem-sucedida
-    if (window.kdsApp) {
-      window.kdsApp.init();
-    }
-  }
-}
 
 // ================================
 // UTILITY FUNCTIONS
@@ -315,8 +155,10 @@ function initFirebase() {
       return;
     }
 
-    // Firebase já foi inicializado na função init()
-    // Apenas configurar database
+    if (!firebase.apps.length) {
+      firebase.initializeApp(CONFIG.firebaseConfig);
+    }
+
     State.database = firebase.database();
     updateStatus(true);
     console.log("✅ Firebase inicializado");
@@ -2188,129 +2030,17 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
 // INITIALIZATION
 // ================================
 (function () {
-  let authManager;
-  let isAppInitialized = false;
-
-  function initApp() {
-    if (isAppInitialized) return; // Prevenir múltiplas inicializações
-    isAppInitialized = true;
-
-    initFirebase();
-    initUI();
-    setTimeout(initInProgressWidget, 1500);
-  }
-
   function init() {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", function () {
-        // Inicializar Firebase primeiro
-        firebase.initializeApp(CONFIG.firebaseConfig);
-
-        // Desabilitar persistência de sessão - SEMPRE pedir senha
-        firebase
-          .auth()
-          .setPersistence(firebase.auth.Auth.Persistence.NONE)
-          .then(() => {
-            console.log("🔒 Persistência desabilitada - sempre pedirá senha");
-            return firebase.auth().signOut();
-          })
-          .then(() => {
-            console.log("🔒 Sessão anterior encerrada");
-
-            // Criar gerenciador de autenticação DEPOIS do logout
-            authManager = new AuthManager();
-
-            // Armazenar função de inicialização para ser chamada após autenticação
-            window.kdsApp = {
-              init: initApp,
-            };
-          })
-          .catch((error) => {
-            console.log("⚠️ Erro na inicialização:", error);
-            // Mesmo com erro, criar o auth manager
-            authManager = new AuthManager();
-            window.kdsApp = {
-              init: initApp,
-            };
-          });
-
-        // Listener para mudanças de autenticação
-        firebase.auth().onAuthStateChanged((user) => {
-          if (user) {
-            console.log("✅ Usuário autenticado:", user.email);
-            if (authManager) {
-              authManager.hideAuthModal();
-            }
-            initApp();
-          } else {
-            console.log("⚠️ Usuário não autenticado - aguardando login");
-            if (authManager) {
-              authManager.showAuthModal();
-            }
-            // NÃO iniciar o app sem autenticação
-            isAppInitialized = false;
-          }
-        });
-
-        // Fazer logout ao fechar/recarregar a página
-        window.addEventListener("beforeunload", () => {
-          firebase.auth().signOut();
-        });
+        initFirebase();
+        initUI();
+        setTimeout(initInProgressWidget, 1500);
       });
     } else {
-      // Inicializar Firebase primeiro
-      firebase.initializeApp(CONFIG.firebaseConfig);
-
-      // Desabilitar persistência de sessão - SEMPRE pedir senha
-      firebase
-        .auth()
-        .setPersistence(firebase.auth.Auth.Persistence.NONE)
-        .then(() => {
-          console.log("🔒 Persistência desabilitada - sempre pedirá senha");
-          return firebase.auth().signOut();
-        })
-        .then(() => {
-          console.log("🔒 Sessão anterior encerrada");
-
-          // Criar gerenciador de autenticação DEPOIS do logout
-          authManager = new AuthManager();
-
-          // Armazenar função de inicialização para ser chamada após autenticação
-          window.kdsApp = {
-            init: initApp,
-          };
-        })
-        .catch((error) => {
-          console.log("⚠️ Erro na inicialização:", error);
-          // Mesmo com erro, criar o auth manager
-          authManager = new AuthManager();
-          window.kdsApp = {
-            init: initApp,
-          };
-        });
-
-      // Listener para mudanças de autenticação
-      firebase.auth().onAuthStateChanged((user) => {
-        if (user) {
-          console.log("✅ Usuário autenticado:", user.email);
-          if (authManager) {
-            authManager.hideAuthModal();
-          }
-          initApp();
-        } else {
-          console.log("⚠️ Usuário não autenticado - aguardando login");
-          if (authManager) {
-            authManager.showAuthModal();
-          }
-          // NÃO iniciar o app sem autenticação
-          isAppInitialized = false;
-        }
-      });
-
-      // Fazer logout ao fechar/recarregar a página
-      window.addEventListener("beforeunload", () => {
-        firebase.auth().signOut();
-      });
+      initFirebase();
+      initUI();
+      setTimeout(initInProgressWidget, 1500);
     }
   }
 
