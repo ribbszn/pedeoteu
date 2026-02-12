@@ -202,6 +202,53 @@
       </div>
     </div>
 
+    <!-- Modal Autenticação -->
+    <div class="auth-modal" id="auth-modal">
+      <div class="auth-modal-content">
+        <div class="auth-lock-icon">🔒</div>
+        <h2 class="auth-title">Insira sua senha de 6 dígitos</h2>
+        <div class="auth-pin-container">
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="0"
+          />
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="1"
+          />
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="2"
+          />
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="3"
+          />
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="4"
+          />
+          <input
+            type="text"
+            class="auth-pin-digit"
+            maxlength="1"
+            data-index="5"
+          />
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+      </div>
+    </div>
+
     <!-- Overlay -->
     <div class="overlay" id="overlay"></div>
 
@@ -224,6 +271,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
     <!-- KDS Script -->
     <script src="kds.js"></script>

@@ -19,6 +19,130 @@
 }
 
 /* ================================
+   AUTH MODAL
+   ================================ */
+.auth-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+
+.auth-modal.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.auth-modal-content {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  border: 2px solid var(--primary);
+  border-radius: 24px;
+  padding: 60px 50px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(255, 193, 7, 0.3);
+  animation: authSlideIn 0.5s ease;
+  max-width: 500px;
+  width: 90%;
+}
+
+@keyframes authSlideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.auth-lock-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 20px rgba(255, 193, 7, 0.5));
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  color: var(--text-main);
+  margin-bottom: 40px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.auth-pin-container {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.auth-pin-digit {
+  width: 60px;
+  height: 70px;
+  font-size: 32px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--primary);
+  font-weight: bold;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.auth-pin-digit:focus {
+  border-color: var(--primary);
+  background: rgba(255, 193, 7, 0.1);
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
+  transform: scale(1.05);
+}
+
+.auth-pin-digit.filled {
+  border-color: var(--secondary);
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.auth-pin-digit.error {
+  border-color: var(--danger);
+  background: rgba(244, 67, 54, 0.1);
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+.auth-error {
+  color: var(--danger);
+  font-size: 0.95rem;
+  min-height: 24px;
+  font-weight: 500;
+}
+
+/* ================================
    RESET & BASE
    ================================ */
 * {

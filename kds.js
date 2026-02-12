@@ -12,7 +12,136 @@ const CONFIG = {
     appId: "1:970185571294:web:25e8552bd72d852283bb4f",
   },
   menuDataUrl: "cardapio.json",
+  auth: {
+    email: "rbnacena@gmail.com",
+    // A senha será inserida pelo usuário
+  },
 };
+
+// ================================
+// AUTHENTICATION
+// ================================
+class AuthManager {
+  constructor() {
+    this.modal = document.getElementById("auth-modal");
+    this.pinDigits = document.querySelectorAll(".auth-pin-digit");
+    this.errorDiv = document.getElementById("auth-error");
+    this.isAuthenticating = false;
+    this.setupPinInputs();
+    this.showAuthModal();
+  }
+
+  setupPinInputs() {
+    this.pinDigits.forEach((input, index) => {
+      // Auto-focus no próximo campo
+      input.addEventListener("input", (e) => {
+        if (e.target.value.length === 1) {
+          input.classList.add("filled");
+          if (index < this.pinDigits.length - 1) {
+            this.pinDigits[index + 1].focus();
+          } else {
+            // Último dígito preenchido, tentar autenticar
+            this.attemptAuth();
+          }
+        }
+      });
+
+      // Permitir backspace para voltar
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !e.target.value && index > 0) {
+          this.pinDigits[index - 1].focus();
+          this.pinDigits[index - 1].value = "";
+          this.pinDigits[index - 1].classList.remove("filled");
+        }
+      });
+
+      // Permitir apenas números
+      input.addEventListener("beforeinput", (e) => {
+        if (e.data && !/^\d$/.test(e.data)) {
+          e.preventDefault();
+        }
+      });
+
+      // Remover classe filled quando limpar
+      input.addEventListener("input", (e) => {
+        if (!e.target.value) {
+          input.classList.remove("filled");
+        }
+      });
+    });
+
+    // Auto-focus no primeiro campo
+    this.pinDigits[0].focus();
+  }
+
+  getPin() {
+    return Array.from(this.pinDigits)
+      .map((input) => input.value)
+      .join("");
+  }
+
+  clearPin() {
+    this.pinDigits.forEach((input) => {
+      input.value = "";
+      input.classList.remove("filled", "error");
+    });
+    this.pinDigits[0].focus();
+  }
+
+  showError(message) {
+    this.errorDiv.textContent = message;
+    this.pinDigits.forEach((input) => input.classList.add("error"));
+
+    setTimeout(() => {
+      this.clearPin();
+      this.errorDiv.textContent = "";
+    }, 1500);
+  }
+
+  async attemptAuth() {
+    if (this.isAuthenticating) return;
+
+    const pin = this.getPin();
+    if (pin.length !== 6) return;
+
+    this.isAuthenticating = true;
+
+    try {
+      // Fazer login com email e senha (PIN)
+      await firebase.auth().signInWithEmailAndPassword(CONFIG.auth.email, pin);
+
+      // Sucesso! Ocultar modal
+      this.hideAuthModal();
+    } catch (error) {
+      console.error("Erro de autenticação:", error);
+
+      if (
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
+      ) {
+        this.showError("Senha incorreta");
+      } else if (error.code === "auth/too-many-requests") {
+        this.showError("Muitas tentativas. Tente mais tarde.");
+      } else {
+        this.showError("Erro ao autenticar");
+      }
+
+      this.isAuthenticating = false;
+    }
+  }
+
+  showAuthModal() {
+    this.modal.classList.remove("hidden");
+  }
+
+  hideAuthModal() {
+    this.modal.classList.add("hidden");
+    // Iniciar aplicação após autenticação bem-sucedida
+    if (window.kdsApp) {
+      window.kdsApp.init();
+    }
+  }
+}
 
 // ================================
 // UTILITY FUNCTIONS
@@ -155,10 +284,8 @@ function initFirebase() {
       return;
     }
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(CONFIG.firebaseConfig);
-    }
-
+    // Firebase já foi inicializado na função init()
+    // Apenas configurar database
     State.database = firebase.database();
     updateStatus(true);
     console.log("✅ Firebase inicializado");
@@ -2030,17 +2157,89 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
 // INITIALIZATION
 // ================================
 (function () {
+  let authManager;
+
+  function initApp() {
+    initFirebase();
+    initUI();
+    setTimeout(initInProgressWidget, 1500);
+  }
+
   function init() {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", function () {
-        initFirebase();
-        initUI();
-        setTimeout(initInProgressWidget, 1500);
+        // Inicializar Firebase primeiro
+        firebase.initializeApp(CONFIG.firebaseConfig);
+
+        // Fazer logout ao carregar para sempre pedir senha
+        firebase
+          .auth()
+          .signOut()
+          .then(() => {
+            console.log("🔒 Sessão anterior encerrada");
+          });
+
+        // Criar gerenciador de autenticação
+        authManager = new AuthManager();
+
+        // Armazenar função de inicialização para ser chamada após autenticação
+        window.kdsApp = {
+          init: initApp,
+        };
+
+        // Listener para mudanças de autenticação
+        firebase.auth().onAuthStateChanged((user) => {
+          if (user) {
+            console.log("✅ Usuário autenticado:", user.email);
+            authManager.hideAuthModal();
+            initApp();
+          } else {
+            console.log("⚠️ Usuário não autenticado");
+            authManager.showAuthModal();
+          }
+        });
+
+        // Fazer logout ao fechar/recarregar a página
+        window.addEventListener("beforeunload", () => {
+          firebase.auth().signOut();
+        });
       });
     } else {
-      initFirebase();
-      initUI();
-      setTimeout(initInProgressWidget, 1500);
+      // Inicializar Firebase primeiro
+      firebase.initializeApp(CONFIG.firebaseConfig);
+
+      // Fazer logout ao carregar para sempre pedir senha
+      firebase
+        .auth()
+        .signOut()
+        .then(() => {
+          console.log("🔒 Sessão anterior encerrada");
+        });
+
+      // Criar gerenciador de autenticação
+      authManager = new AuthManager();
+
+      // Armazenar função de inicialização para ser chamada após autenticação
+      window.kdsApp = {
+        init: initApp,
+      };
+
+      // Listener para mudanças de autenticação
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          console.log("✅ Usuário autenticado:", user.email);
+          authManager.hideAuthModal();
+          initApp();
+        } else {
+          console.log("⚠️ Usuário não autenticado");
+          authManager.showAuthModal();
+        }
+      });
+
+      // Fazer logout ao fechar/recarregar a página
+      window.addEventListener("beforeunload", () => {
+        firebase.auth().signOut();
+      });
     }
   }
 
