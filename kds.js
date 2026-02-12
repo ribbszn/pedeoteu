@@ -138,6 +138,9 @@ class AuthManager {
   }
 
   showAuthModal() {
+    // Bloquear o body
+    document.body.classList.add("locked");
+
     if (this.modal) {
       this.modal.classList.remove("hidden");
       this.modal.style.display = "flex";
@@ -160,6 +163,10 @@ class AuthManager {
       this.modal.style.opacity = "0";
       this.modal.style.visibility = "hidden";
     }
+
+    // Desbloquear o body
+    document.body.classList.remove("locked");
+
     // Iniciar aplicação após autenticação bem-sucedida
     if (window.kdsApp) {
       window.kdsApp.init();
@@ -2182,8 +2189,12 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
 // ================================
 (function () {
   let authManager;
+  let isAppInitialized = false;
 
   function initApp() {
+    if (isAppInitialized) return; // Prevenir múltiplas inicializações
+    isAppInitialized = true;
+
     initFirebase();
     initUI();
     setTimeout(initInProgressWidget, 1500);
@@ -2195,31 +2206,49 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
         // Inicializar Firebase primeiro
         firebase.initializeApp(CONFIG.firebaseConfig);
 
-        // Fazer logout ao carregar para sempre pedir senha
+        // Desabilitar persistência de sessão - SEMPRE pedir senha
         firebase
           .auth()
-          .signOut()
+          .setPersistence(firebase.auth.Auth.Persistence.NONE)
+          .then(() => {
+            console.log("🔒 Persistência desabilitada - sempre pedirá senha");
+            return firebase.auth().signOut();
+          })
           .then(() => {
             console.log("🔒 Sessão anterior encerrada");
+
+            // Criar gerenciador de autenticação DEPOIS do logout
+            authManager = new AuthManager();
+
+            // Armazenar função de inicialização para ser chamada após autenticação
+            window.kdsApp = {
+              init: initApp,
+            };
+          })
+          .catch((error) => {
+            console.log("⚠️ Erro na inicialização:", error);
+            // Mesmo com erro, criar o auth manager
+            authManager = new AuthManager();
+            window.kdsApp = {
+              init: initApp,
+            };
           });
-
-        // Criar gerenciador de autenticação
-        authManager = new AuthManager();
-
-        // Armazenar função de inicialização para ser chamada após autenticação
-        window.kdsApp = {
-          init: initApp,
-        };
 
         // Listener para mudanças de autenticação
         firebase.auth().onAuthStateChanged((user) => {
           if (user) {
             console.log("✅ Usuário autenticado:", user.email);
-            authManager.hideAuthModal();
+            if (authManager) {
+              authManager.hideAuthModal();
+            }
             initApp();
           } else {
-            console.log("⚠️ Usuário não autenticado");
-            authManager.showAuthModal();
+            console.log("⚠️ Usuário não autenticado - aguardando login");
+            if (authManager) {
+              authManager.showAuthModal();
+            }
+            // NÃO iniciar o app sem autenticação
+            isAppInitialized = false;
           }
         });
 
@@ -2232,31 +2261,49 @@ async function togglePaidExtraAvailability(extra, isAvailable) {
       // Inicializar Firebase primeiro
       firebase.initializeApp(CONFIG.firebaseConfig);
 
-      // Fazer logout ao carregar para sempre pedir senha
+      // Desabilitar persistência de sessão - SEMPRE pedir senha
       firebase
         .auth()
-        .signOut()
+        .setPersistence(firebase.auth.Auth.Persistence.NONE)
+        .then(() => {
+          console.log("🔒 Persistência desabilitada - sempre pedirá senha");
+          return firebase.auth().signOut();
+        })
         .then(() => {
           console.log("🔒 Sessão anterior encerrada");
+
+          // Criar gerenciador de autenticação DEPOIS do logout
+          authManager = new AuthManager();
+
+          // Armazenar função de inicialização para ser chamada após autenticação
+          window.kdsApp = {
+            init: initApp,
+          };
+        })
+        .catch((error) => {
+          console.log("⚠️ Erro na inicialização:", error);
+          // Mesmo com erro, criar o auth manager
+          authManager = new AuthManager();
+          window.kdsApp = {
+            init: initApp,
+          };
         });
-
-      // Criar gerenciador de autenticação
-      authManager = new AuthManager();
-
-      // Armazenar função de inicialização para ser chamada após autenticação
-      window.kdsApp = {
-        init: initApp,
-      };
 
       // Listener para mudanças de autenticação
       firebase.auth().onAuthStateChanged((user) => {
         if (user) {
           console.log("✅ Usuário autenticado:", user.email);
-          authManager.hideAuthModal();
+          if (authManager) {
+            authManager.hideAuthModal();
+          }
           initApp();
         } else {
-          console.log("⚠️ Usuário não autenticado");
-          authManager.showAuthModal();
+          console.log("⚠️ Usuário não autenticado - aguardando login");
+          if (authManager) {
+            authManager.showAuthModal();
+          }
+          // NÃO iniciar o app sem autenticação
+          isAppInitialized = false;
         }
       });
 

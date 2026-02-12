@@ -2298,3 +2298,21 @@ button {
   margin-top: 4px;
   line-height: 1.4;
 }
+
+/* ================================
+   SECURITY - Lock Screen
+   ================================ */
+body.locked .kds-header,
+body.locked .kds-main,
+body.locked .sidebar,
+body.locked .modal:not(#auth-modal),
+body.locked .overlay,
+body.locked .toast-container {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+body.locked {
+  overflow: hidden;
+}
