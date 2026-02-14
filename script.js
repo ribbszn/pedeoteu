@@ -16,6 +16,7 @@ let tipoConsumo = ""; // ARMAZENA 'Para Comer no Local' OU 'Para Viagem'
 // Estado de disponibilidade de ingredientes sincronizado com KDS
 let ingredientsAvailability = {};
 let paidExtrasAvailability = {};
+let menuAvailability = {}; // ✅ NOVO: Disponibilidade de itens do menu
 
 const firebaseConfig = {
   apiKey: "AIzaSyDFFbaZmX80QezLfozPAIaIGEhIJm9z43E",
@@ -97,6 +98,24 @@ function initAvailabilityListeners() {
   db.ref("paidExtrasAvailability").on("value", (snapshot) => {
     paidExtrasAvailability = snapshot.val() || {};
     console.log("💰 Disponibilidade de adicionais pagos atualizada no totem");
+  });
+
+  // ✅ Listener para disponibilidade de menu - CORRIGIDO para usar mesmo formato do KDS
+  db.ref("menuAvailability").on("value", (snapshot) => {
+    menuAvailability = snapshot.val() || {};
+    console.log(
+      "📋 Disponibilidade de menu atualizada no totem",
+      menuAvailability,
+    );
+
+    // Limpar carrinho de itens indisponíveis
+    checkAndRemoveUnavailableItemsFromCart();
+
+    // Recarregar a categoria atual para atualizar a interface
+    if (currentCategory && cardapioData[currentCategory]) {
+      const activeBtn = document.querySelector(".sessao-topo button.active");
+      showCategory(currentCategory, activeBtn);
+    }
   });
 }
 
@@ -425,6 +444,20 @@ function updateCart() {
 }
 
 function addToCart(name, price, custom = {}) {
+  // ✅ VALIDAÇÃO: Verificar disponibilidade antes de adicionar
+  // Extrair categoria e nome do item para verificar disponibilidade
+  const itemData = findItemInMenu(name);
+  if (itemData && itemData.category) {
+    // Usar formato do KDS: categoria:nome
+    const itemKey = `${itemData.category}:${itemData.name}`;
+
+    if (menuAvailability[itemKey] === false) {
+      showToastFeedback(`❌ ${name} está indisponível no momento`);
+      console.warn("⚠️ Tentativa de adicionar item indisponível:", name);
+      return; // Bloqueia adição
+    }
+  }
+
   const hasCustom = Object.keys(custom).length > 0;
 
   let existing = null;
@@ -444,7 +477,6 @@ function addToCart(name, price, custom = {}) {
   playSound("add");
   updateCart();
 
-  // ADICIONE ESTA LINHA PARA O FEEDBACK VISUAL
   showToastFeedback(`✅ ${name} adicionado!`);
 }
 
@@ -476,9 +508,78 @@ function removeFromCart(index) {
 
 function adjustQuantity(index, delta) {
   if (!cart[index]) return;
+
+  // ✅ VALIDAÇÃO: Se está aumentando, verificar disponibilidade
+  if (delta > 0) {
+    const itemName = cart[index].item;
+    const itemData = findItemInMenu(itemName);
+
+    if (itemData && itemData.category) {
+      const itemKey = `${itemData.category}-${itemData.name}`;
+
+      if (menuAvailability[itemKey] === false) {
+        showToastFeedback(`❌ ${itemName} está indisponível`);
+        console.warn("⚠️ Item ficou indisponível:", itemName);
+        // Remove o item do carrinho
+        removeFromCart(index);
+        return;
+      }
+    }
+  }
+
   cart[index].quantity = cart[index].quantity + delta;
   if (cart[index].quantity < 1) cart[index].quantity = 1;
   updateCart();
+}
+
+// ✅ NOVA: Função para encontrar item no cardápio
+function findItemInMenu(itemName) {
+  if (!cardapioData) return null;
+
+  for (const [category, items] of Object.entries(cardapioData)) {
+    for (const item of items) {
+      // Verificar se é o item exato ou se contém o nome base
+      if (item.nome === itemName || itemName.includes(item.nome)) {
+        return {
+          category: category,
+          name: item.nome,
+          item: item,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// ✅ Limpar carrinho de itens indisponíveis
+function checkAndRemoveUnavailableItemsFromCart() {
+  if (!cart || cart.length === 0) return;
+
+  const originalLength = cart.length;
+  const removedItems = [];
+
+  cart = cart.filter((cartItem) => {
+    const itemData = findItemInMenu(cartItem.item);
+
+    if (itemData && itemData.category) {
+      // Usar formato do KDS: categoria:nome
+      const itemKey = `${itemData.category}:${itemData.name}`;
+
+      if (menuAvailability[itemKey] === false) {
+        removedItems.push(cartItem.item);
+        return false; // Remove do carrinho
+      }
+    }
+    return true; // Mantém no carrinho
+  });
+
+  // Notificar se algum item foi removido
+  if (removedItems.length > 0) {
+    const itemsList = removedItems.join(", ");
+    showToastFeedback(`⚠️ Removidos (indisponíveis): ${itemsList}`);
+    updateCart();
+    console.log("🗑️ Itens removidos do carrinho:", removedItems);
+  }
 }
 
 function clearCart() {
@@ -1686,18 +1787,60 @@ if (footer) {
     footer.classList.toggle("expanded");
   });
 }
+// ✅ FUNÇÃO CORRIGIDA: Verifica disponibilidade usando o mesmo formato do KDS (categoria:nome)
 function isItemUnavailable(itemName, subItem = null) {
-  const unavailable = JSON.parse(
-    localStorage.getItem("unavailable_items") || "[]",
-  );
+  // Encontrar a categoria do item
+  let category = currentCategory;
 
-  // Se passou um subItem (sabor/tamanho), verifica o nome combinado
-  if (subItem && subItem !== itemName) {
-    return unavailable.includes(`${itemName} - ${subItem}`);
+  if (!category) {
+    // Buscar categoria se não estiver definida
+    for (const [cat, items] of Object.entries(cardapioData)) {
+      const found = items.some(
+        (item) =>
+          item.nome === itemName ||
+          (item.opcoes && item.opcoes.includes(subItem)),
+      );
+      if (found) {
+        category = cat;
+        break;
+      }
+    }
   }
 
-  // Caso contrário, verifica apenas o item principal
-  return unavailable.includes(itemName);
+  if (!category) {
+    console.warn("⚠️ Categoria não encontrada para:", itemName, subItem);
+    return false;
+  }
+
+  // Verificar item principal primeiro
+  const itemKey = `${category}:${itemName}`;
+  if (menuAvailability[itemKey] === false) {
+    console.log(`❌ Item principal indisponível: ${itemKey}`);
+    return true;
+  }
+
+  // Se tem subitem (opção) válido, verificar também
+  // Ignore se subItem é vazio, igual ao itemName, ou é um índice
+  if (
+    subItem &&
+    subItem !== "" &&
+    subItem !== itemName &&
+    typeof subItem === "string"
+  ) {
+    const subItemKey = `${category}:${itemName}:${subItem}`;
+
+    // Log detalhado para debug
+    console.log(
+      `🔍 Verificando subitem: "${subItemKey}" = ${menuAvailability[subItemKey]}`,
+    );
+
+    if (menuAvailability[subItemKey] === false) {
+      console.log(`❌ Subitem indisponível: ${subItemKey}`);
+      return true;
+    }
+  }
+
+  return false;
 }
 function isIngredientUnavailable(name) {
   // Verifica se o ingrediente está marcado como indisponível no KDS
@@ -1708,11 +1851,3 @@ function isPaidExtraUnavailable(name) {
   // Verifica se o adicional pago está marcado como indisponível no KDS
   return paidExtrasAvailability[name] === false;
 }
-
-window.addEventListener("storage", (e) => {
-  if (e.key === "unavailable_items_updated") {
-    const activeBtn = document.querySelector(".sessao-topo button.active");
-
-    showCategory(currentCategory, activeBtn); // Recarrega a categoria atual
-  }
-});

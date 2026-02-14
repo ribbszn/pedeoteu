@@ -58,6 +58,7 @@ const AppState = {
   // Disponibilidade de insumos
   ingredientsAvailability: {},
   paidExtrasAvailability: {},
+  menuAvailability: {}, // NOVO: Disponibilidade de itens do menu
 
   // Controle de combos
   isCombo: false,
@@ -204,14 +205,26 @@ const MenuService = {
   },
 
   async checkAvailability(category, itemName) {
+    // Usar formato do KDS: categoria:nome
+    const itemKey = `${category}:${itemName}`;
+
+    // Primeiro verificar no estado local (mais rápido)
+    if (AppState.menuAvailability.hasOwnProperty(itemKey)) {
+      return AppState.menuAvailability[itemKey] !== false;
+    }
+
+    // Se não estiver no estado, buscar do Firebase
     if (!database) return true;
 
     try {
-      const itemKey = `${category}-${itemName}`;
       const snapshot = await database
         .ref(`menuAvailability/${itemKey}`)
         .once("value");
       const isAvailable = snapshot.val();
+
+      // Salvar no estado para próxima vez
+      AppState.menuAvailability[itemKey] = isAvailable;
+
       return isAvailable !== false;
     } catch (error) {
       console.error("Erro ao verificar disponibilidade:", error);
@@ -222,11 +235,112 @@ const MenuService = {
   listenToAvailability() {
     if (!database) return;
 
-    database.ref("menuAvailability").on("value", () => {
-      // Recarregar o menu quando a disponibilidade mudar
-      if (AppState.cardapioData) {
-        MenuUI.render(AppState.cardapioData);
-      }
+    database.ref("menuAvailability").on("value", (snapshot) => {
+      console.log("🔄 Disponibilidade de menu atualizada");
+      AppState.menuAvailability = snapshot.val() || {};
+
+      // ✅ Verificar e remover itens indisponíveis do carrinho
+      CartManager.checkAndRemoveUnavailableItems();
+
+      // Atualizar visibilidade dos cards e opções existentes
+      Object.keys(AppState.menuAvailability).forEach((key) => {
+        // Formato do KDS: categoria:nome ou categoria:nome:opcao
+        const parts = key.split(":");
+        const category = parts[0];
+        const itemName = parts[1];
+        const optionName = parts[2]; // pode ser undefined
+        const isAvailable = AppState.menuAvailability[key];
+
+        // Se tem 3 partes, é uma opção específica
+        if (parts.length === 3) {
+          // Atualizar botão de opção específica
+          const card = document.querySelector(
+            `[data-category="${category}"][data-item-name="${itemName}"]`,
+          );
+
+          if (card) {
+            const optionsContainer = card.querySelector(".options-container");
+            if (optionsContainer) {
+              const buttons = optionsContainer.querySelectorAll("button");
+              buttons.forEach((btn) => {
+                // Verificar se o texto do botão corresponde à opção
+                const btnText = btn.textContent.split("R$")[0].trim();
+                if (btnText === optionName) {
+                  console.log(
+                    `🔄 Atualizando botão de opção: ${optionName} -> ${isAvailable ? "disponível" : "indisponível"}`,
+                  );
+
+                  if (isAvailable === false) {
+                    btn.disabled = true;
+                    btn.style.opacity = "0.5";
+                    btn.style.cursor = "not-allowed";
+                    btn.style.background = "#666";
+                    btn.innerHTML = `${optionName}<span class="price-tag">Indisponível</span>`;
+                  } else {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                    btn.style.background = "";
+                    // Restaurar o preço original (teria que pegar do cardapioData)
+                  }
+                }
+              });
+            }
+          }
+        } else {
+          // É um item principal - atualizar o card inteiro
+          const fullItemName = parts.slice(1).join(":");
+          const card = document.querySelector(
+            `[data-category="${category}"][data-item-name="${fullItemName}"]`,
+          );
+
+          if (card) {
+            if (isAvailable === false) {
+              // Tornar indisponível
+              card.classList.add("unavailable");
+              card.style.opacity = "0.5";
+              card.style.pointerEvents = "none";
+              card.style.filter = "grayscale(100%)";
+
+              // Adicionar tag de indisponível se não existir
+              const info = card.querySelector(".info");
+              if (info && !card.querySelector(".unavailable-tag")) {
+                const unavailableTag = document.createElement("div");
+                unavailableTag.className = "unavailable-tag";
+                unavailableTag.textContent = "⚠️ Indisponível";
+                unavailableTag.style.cssText = `
+                  color: #f44336;
+                  font-weight: bold;
+                  font-size: 0.85rem;
+                  margin-top: 8px;
+                  background: rgba(244, 67, 54, 0.1);
+                  padding: 5px 10px;
+                  border-radius: 5px;
+                  border: 1px solid #f44336;
+                `;
+                info.appendChild(unavailableTag);
+              }
+            } else {
+              // Tornar disponível
+              card.classList.remove("unavailable");
+              card.style.opacity = "1";
+              card.style.pointerEvents = "auto";
+              card.style.filter = "none";
+
+              // Remover tag de indisponível
+              const unavailableTag = card.querySelector(".unavailable-tag");
+              if (unavailableTag) {
+                unavailableTag.remove();
+              }
+            }
+          }
+        }
+      });
+
+      console.log(
+        "✅ Cards atualizados com disponibilidade:",
+        AppState.menuAvailability,
+      );
     });
   },
 
@@ -322,6 +436,17 @@ const MenuService = {
 // ================================
 const CartManager = {
   add(item) {
+    // ✅ VALIDAÇÃO: Verificar se o item está disponível
+    if (item.categoria && item.nome) {
+      const itemKey = `${item.categoria}:${item.nome}`;
+
+      if (AppState.menuAvailability[itemKey] === false) {
+        showToast("❌ Item indisponível no momento");
+        console.warn("⚠️ Tentativa de adicionar item indisponível:", item.nome);
+        return;
+      }
+    }
+
     const existingItemIndex = AppState.cart.findIndex(
       (cartItem) =>
         cartItem.nome === item.nome &&
@@ -337,12 +462,27 @@ const CartManager = {
     } else {
       AppState.cart.push({ ...item, quantity: 1 });
     }
+
+    showToast(`✅ ${item.nome} adicionado ao carrinho`);
     this.update();
   },
 
   updateQuantity(index, change) {
     const item = AppState.cart[index];
     if (!item) return;
+
+    // ✅ VALIDAÇÃO: Se está aumentando, verificar disponibilidade
+    if (change > 0 && item.categoria && item.nome) {
+      const itemKey = `${item.categoria}:${item.nome}`;
+
+      if (AppState.menuAvailability[itemKey] === false) {
+        showToast("❌ Item indisponível no momento");
+        console.warn("⚠️ Item ficou indisponível:", item.nome);
+        // Remove o item do carrinho se ficou indisponível
+        this.remove(index);
+        return;
+      }
+    }
 
     item.quantity = (item.quantity || 1) + change;
 
@@ -381,6 +521,30 @@ const CartManager = {
 
   update() {
     CartUI.render();
+  },
+
+  // ✅ Verificar e remover itens indisponíveis do carrinho
+  checkAndRemoveUnavailableItems() {
+    let removedItems = [];
+
+    AppState.cart = AppState.cart.filter((item) => {
+      if (item.categoria && item.nome) {
+        const itemKey = `${item.categoria}:${item.nome}`;
+
+        if (AppState.menuAvailability[itemKey] === false) {
+          removedItems.push(item.nome);
+          return false; // Remove do carrinho
+        }
+      }
+      return true; // Mantém no carrinho
+    });
+
+    // Notificar usuário se algum item foi removido
+    if (removedItems.length > 0) {
+      const itemsList = removedItems.join(", ");
+      showToast(`⚠️ Itens removidos do carrinho (indisponíveis): ${itemsList}`);
+      this.update();
+    }
   },
 };
 
@@ -509,9 +673,28 @@ const MenuUI = {
         const btn = DOM.create("button", "opt-btn");
         btn.innerHTML = `${size}<span class="price-tag">${Utils.formatPrice(price)}</span>`;
 
-        btn.addEventListener("click", () =>
-          OrderFlow.start(item, category, size, price),
+        // ✅ Verificar disponibilidade da opção específica
+        const optionKey = `${category}:${item.nome}:${size}`;
+        const isOptionAvailable =
+          AppState.menuAvailability[optionKey] !== false;
+
+        // Log para debug
+        console.log(
+          `🔍 Verificando opção: ${optionKey} = ${isOptionAvailable}`,
         );
+
+        if (!isOptionAvailable) {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+          btn.style.background = "#666";
+          btn.innerHTML = `${size}<span class="price-tag">Indisponível</span>`;
+        } else {
+          btn.addEventListener("click", () =>
+            OrderFlow.start(item, category, size, price),
+          );
+        }
+
         optionsContainer.appendChild(btn);
       });
     }
@@ -572,6 +755,29 @@ const MenuUI = {
 // ================================
 const OrderFlow = {
   start(item, category, selectedSize, selectedPrice) {
+    // ✅ VALIDAÇÃO: Verificar disponibilidade antes de iniciar o fluxo
+    const itemKey = `${category}:${item.nome}`;
+
+    if (AppState.menuAvailability[itemKey] === false) {
+      showToast("❌ Este item está indisponível no momento");
+      console.warn("⚠️ Tentativa de pedir item indisponível:", item.nome);
+      return;
+    }
+
+    // ✅ Se tem uma opção selecionada, verificar disponibilidade da opção também
+    if (selectedSize && selectedSize !== item.nome) {
+      const optionKey = `${category}:${item.nome}:${selectedSize}`;
+      console.log(
+        `🔍 Verificando opção selecionada: ${optionKey} = ${AppState.menuAvailability[optionKey]}`,
+      );
+
+      if (AppState.menuAvailability[optionKey] === false) {
+        showToast(`❌ A opção "${selectedSize}" está indisponível no momento`);
+        console.warn("⚠️ Tentativa de pedir opção indisponível:", selectedSize);
+        return;
+      }
+    }
+
     // Combos COMPLETOS (burger + batata + bebida) - Categoria "Combos"
     if (item.combo && category === "Combos" && item.upgrades) {
       this.startFullCombo(item, category, selectedSize, selectedPrice);

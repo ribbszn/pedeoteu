@@ -1,5 +1,5 @@
 // ================================================================
-// FIREBASE INITIALIZATION WITH AUTHENTICATION
+// FIREBASE INITIALIZATION WITH AUTHENTICATION (KDS)
 // ================================================================
 
 const firebaseConfig = {
@@ -12,137 +12,134 @@ const firebaseConfig = {
   appId: "1:970185571294:web:25e8552bd72d852283bb4f",
 };
 
-// Initialize Firebase
+// ================================================================
+// INIT FIREBASE
+// ================================================================
+
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
   console.log("✅ Firebase inicializado");
 }
 
-// Get Firebase services
 const auth = firebase.auth();
 const database = firebase.database();
 
 // ================================================================
-// AUTHENTICATION STATE MANAGEMENT
+// CONFIGURA PERSISTÊNCIA (APENAS NA ABA)
+// ================================================================
+
+auth
+  .setPersistence(firebase.auth.Auth.Persistence.SESSION)
+  .then(() => {
+    console.log("✅ Persistência: SESSION (fecha aba = logout)");
+  })
+  .catch((error) => {
+    console.error("❌ Erro ao configurar persistência:", error);
+  });
+
+// ================================================================
+// LOGOUT AO FECHAR ABA
+// ================================================================
+
+window.addEventListener("beforeunload", () => {
+  auth.signOut();
+});
+
+// ================================================================
+// CONTROLE DE AUTENTICAÇÃO
 // ================================================================
 
 let isAuthenticated = false;
 
-// Check if this is the KDS page
-const isKDSPage = window.location.pathname.includes("kds.html");
+const loginScreen = document.getElementById("login-screen");
+const mainHeader = document.querySelector(".kds-header");
+const mainContent = document.querySelector(".kds-main");
 
-if (isKDSPage) {
-  console.log("🔐 KDS - Autenticação necessária");
+// Sempre começa mostrando login
+if (loginScreen) loginScreen.style.display = "flex";
+if (mainHeader) mainHeader.style.display = "none";
+if (mainContent) mainContent.style.display = "none";
 
-  // Check authentication state
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      console.log("✅ Usuário autenticado:", user.email);
-      isAuthenticated = true;
+// Listener oficial do Firebase
+auth.onAuthStateChanged((user) => {
+  console.log("🔄 Auth state:", user ? "LOGADO" : "DESLOGADO");
 
-      // Hide login screen if it exists
-      const loginScreen = document.getElementById("login-screen");
-      if (loginScreen) {
-        loginScreen.style.display = "none";
-      }
+  if (user) {
+    isAuthenticated = true;
 
-      // Show main content
-      const mainContent = document.querySelector(".kds-header");
-      const kdsMain = document.querySelector(".kds-main");
-      if (mainContent) mainContent.style.display = "flex";
-      if (kdsMain) kdsMain.style.display = "flex";
+    if (loginScreen) loginScreen.style.display = "none";
+    if (mainHeader) mainHeader.style.display = "flex";
+    if (mainContent) mainContent.style.display = "flex";
 
-      // Initialize KDS if the init function exists
-      if (typeof window.initKDS === "function") {
-        window.initKDS();
-      }
-    } else {
-      console.log("❌ Usuário não autenticado");
-      isAuthenticated = false;
-
-      // Show login screen
-      const loginScreen = document.getElementById("login-screen");
-      if (loginScreen) {
-        loginScreen.style.display = "flex";
-      }
-
-      // Hide main content
-      const mainContent = document.querySelector(".kds-header");
-      const kdsMain = document.querySelector(".kds-main");
-      if (mainContent) mainContent.style.display = "none";
-      if (kdsMain) kdsMain.style.display = "none";
+    if (typeof window.initKDS === "function") {
+      window.initKDS();
     }
-  });
-} else {
-  console.log("📱 Index/Totem - Sem autenticação necessária");
-  isAuthenticated = true; // Index e Totem não precisam de autenticação
-}
+  } else {
+    isAuthenticated = false;
+
+    if (loginScreen) loginScreen.style.display = "flex";
+    if (mainHeader) mainHeader.style.display = "none";
+    if (mainContent) mainContent.style.display = "none";
+  }
+});
 
 // ================================================================
-// LOGIN FUNCTION FOR KDS
+// LOGIN COM PIN (EMAIL FIXO)
 // ================================================================
 
 window.loginWithPin = async function (pin) {
   try {
-    // Validate PIN format
     if (!/^\d{6}$/.test(pin)) {
-      throw new Error("PIN deve ter exatamente 6 dígitos");
+      throw new Error("PIN deve ter 6 dígitos");
     }
 
-    // Email fixo (oculto do usuário no código)
     const email = "rbnacena@gmail.com";
-    // O PIN digitado pelo usuário É a senha do Firebase
     const password = pin;
 
-    console.log("🔐 Tentando autenticação...");
-
-    // Faz login no Firebase: email fixo + PIN como senha
     await auth.signInWithEmailAndPassword(email, password);
-    console.log("✅ Login bem-sucedido!");
+    console.log("✅ Login realizado");
+
     return { success: true };
   } catch (error) {
     console.error("❌ Erro no login:", error);
 
-    let errorMessage = "PIN incorreto";
+    let msg = "PIN inválido";
 
     switch (error.code) {
       case "auth/wrong-password":
-        errorMessage = "PIN incorreto. Tente novamente.";
-        break;
-      case "auth/user-not-found":
-        errorMessage = "Usuário não encontrado no Firebase.";
+        msg = "PIN incorreto";
         break;
       case "auth/too-many-requests":
-        errorMessage = "Muitas tentativas. Aguarde um momento.";
+        msg = "Muitas tentativas. Aguarde.";
+        break;
+      case "auth/network-request-failed":
+        msg = "Sem conexão";
         break;
       default:
-        errorMessage = "Erro ao autenticar: " + error.message;
+        msg = "Erro ao autenticar";
     }
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    return { success: false, error: msg };
   }
 };
 
 // ================================================================
-// LOGOUT FUNCTION
+// LOGOUT MANUAL
 // ================================================================
 
 window.logoutKDS = async function () {
   try {
     await auth.signOut();
-    console.log("✅ Logout realizado");
-
-    // Reload page to show login screen
-    window.location.reload();
-  } catch (error) {
-    console.error("❌ Erro ao fazer logout:", error);
+    location.reload();
+  } catch (err) {
+    console.error("Erro logout:", err);
   }
 };
 
-// Export for use in other scripts
+// ================================================================
+// EXPORTS
+// ================================================================
+
 window.firebaseAuth = auth;
 window.firebaseDatabase = database;
 window.isAuthenticated = () => isAuthenticated;
