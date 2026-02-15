@@ -879,7 +879,7 @@
     {
       "nome": "Milk Shake 300ml",
       "img": "./img/milks.png",
-      "caldas": ["Morango", "Chocolate"],
+      "caldas": ["Morango", "Chocolate", "Sem calda"],
       "opcoes": [
         "Morango",
         "Ninho Trufado",
@@ -892,7 +892,7 @@
     {
       "nome": "Milk Shake 400ml",
       "img": "./img/milks.png",
-      "caldas": ["Morango", "Chocolate"],
+      "caldas": ["Morango", "Chocolate", "Sem calda"],
       "opcoes": [
         "Morango",
         "Ninho Trufado",

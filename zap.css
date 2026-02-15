@@ -262,6 +262,223 @@ header {
 /* ================================
    MODAL
    ================================ */
+
+/* Modal de Boas-vindas */
+.welcome-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+
+.welcome-modal.hidden {
+  display: none;
+}
+
+.welcome-modal.closing {
+  animation: fadeOut 0.8s ease forwards;
+}
+
+.welcome-modal.closing .welcome-modal-content {
+  animation: slideDown 0.8s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+}
+
+.welcome-modal-content {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  border: 2px solid var(--primary);
+  border-radius: 20px;
+  padding: 40px 30px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(255, 193, 7, 0.3);
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 25px;
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.welcome-logo img {
+  width: 120px;
+  height: 120px;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 15px rgba(255, 193, 7, 0.4));
+  transition: transform 0.3s ease;
+}
+
+.welcome-logo img:hover {
+  transform: scale(1.05);
+}
+
+@keyframes logoFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.welcome-modal-content h2 {
+  color: var(--primary);
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+.welcome-text {
+  color: var(--text-main);
+  line-height: 1.8;
+  margin-bottom: 30px;
+}
+
+.welcome-text p {
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+
+.welcome-text strong {
+  color: var(--primary);
+}
+
+.welcome-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin: 25px 0;
+  padding: 20px;
+  background: rgba(255, 193, 7, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  text-align: left;
+}
+
+.feature-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.welcome-cta {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+
+.btn-welcome-close {
+  width: 100%;
+  padding: 18px;
+  background: var(--primary);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.btn-welcome-close:hover {
+  background: #ffcd38;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 193, 7, 0.6);
+}
+
+.btn-welcome-close:active {
+  transform: translateY(0);
+}
+
+/* Responsivo para o modal de boas-vindas */
+@media (max-width: 768px) and (min-width: 481px) {
+  .welcome-logo img {
+    width: 110px;
+    height: 110px;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-modal-content {
+    padding: 30px 20px;
+  }
+
+  .welcome-modal-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .welcome-features {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .welcome-logo img {
+    width: 100px;
+    height: 100px;
+  }
+}
+
 .overlay {
   position: fixed;
   inset: 0;

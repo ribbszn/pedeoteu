@@ -1,4 +1,32 @@
 // ================================
+// WELCOME MODAL
+// ================================
+const WelcomeModal = {
+  init() {
+    const modal = document.getElementById("welcome-modal");
+    const closeBtn = document.getElementById("btn-welcome-close");
+
+    // SEMPRE mostrar o modal ao abrir o site
+    modal.classList.remove("hidden");
+    // Bloquear scroll do body
+    document.body.style.overflow = "hidden";
+
+    // Fechar modal ao clicar no botão
+    closeBtn.addEventListener("click", () => {
+      // Adicionar classe de animação de saída
+      modal.classList.add("closing");
+
+      // Aguardar a animação terminar antes de esconder
+      setTimeout(() => {
+        modal.classList.add("hidden");
+        modal.classList.remove("closing");
+        document.body.style.overflow = "auto";
+      }, 800); // Tempo da animação (0.8s)
+    });
+  },
+};
+
+// ================================
 // CONFIGURATION
 // ================================
 const CONFIG = {
@@ -1083,11 +1111,12 @@ const OrderFlow = {
 
   renderCaldas(title, body, options, burgerName) {
     const displayName = burgerName || AppState.tempItem.nome;
-    title.textContent = `${displayName} - Escolha as Caldas 🍯`;
+    title.textContent = `${displayName} - Escolha a Calda 🍯`;
 
     if (!AppState.tempItem.selectedCaldas)
       AppState.tempItem.selectedCaldas = [];
 
+    // Usar radio button para seleção única obrigatória
     body.innerHTML = options
       .map((opt, index) => {
         const isChecked = AppState.tempItem.selectedCaldas.includes(opt);
@@ -1095,23 +1124,17 @@ const OrderFlow = {
         return `
           <div class="option-row">
             <label for="${id}" style="flex: 1; cursor: pointer;">${opt}</label>
-            <input type="checkbox" id="${id}" value="${opt}" ${isChecked ? "checked" : ""}>
+            <input type="radio" name="calda-selection" id="${id}" value="${opt}" ${isChecked ? "checked" : ""}>
           </div>
         `;
       })
       .join("");
 
-    body.querySelectorAll("input[type='checkbox']").forEach((input) => {
+    body.querySelectorAll("input[type='radio']").forEach((input) => {
       input.onchange = (e) => {
         const value = e.target.value;
-        if (e.target.checked) {
-          if (!AppState.tempItem.selectedCaldas.includes(value)) {
-            AppState.tempItem.selectedCaldas.push(value);
-          }
-        } else {
-          const idx = AppState.tempItem.selectedCaldas.indexOf(value);
-          if (idx > -1) AppState.tempItem.selectedCaldas.splice(idx, 1);
-        }
+        // Como é radio, limpa e adiciona apenas a seleção atual
+        AppState.tempItem.selectedCaldas = [value];
       };
     });
   },
@@ -1326,6 +1349,19 @@ const OrderFlow = {
   },
 
   nextStep() {
+    // Validar se o passo atual é de caldas e se uma calda foi selecionada
+    const currentStepData = AppState.stepsData[AppState.currentStep];
+
+    if (currentStepData && currentStepData.type === "caldas") {
+      if (
+        !AppState.tempItem.selectedCaldas ||
+        AppState.tempItem.selectedCaldas.length === 0
+      ) {
+        showToast("⚠️ Por favor, escolha uma calda");
+        return;
+      }
+    }
+
     if (AppState.currentStep < AppState.stepsData.length - 1) {
       AppState.currentStep++;
       this.renderCurrentStep();
@@ -1630,9 +1666,12 @@ const CheckoutManager = {
         const deliveryFields = DOM.elements.deliveryFields;
         if (type === "delivery") {
           deliveryFields.style.display = "block";
-          deliveryFields.querySelectorAll("input").forEach((input) => {
-            input.required = true;
-          });
+          // Apenas campos com data-delivery-required são obrigatórios
+          deliveryFields
+            .querySelectorAll("[data-delivery-required]")
+            .forEach((input) => {
+              input.required = true;
+            });
           deliveryFields.querySelectorAll("select").forEach((select) => {
             select.required = true;
           });
@@ -1698,13 +1737,13 @@ const CheckoutManager = {
       });
     }
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      this.processCheckout(new FormData(form));
+      await this.processCheckout(new FormData(form));
     });
   },
 
-  processCheckout(formData) {
+  async processCheckout(formData) {
     const data = Object.fromEntries(formData.entries());
 
     if (AppState.cart.length === 0) {
@@ -1712,9 +1751,33 @@ const CheckoutManager = {
       return;
     }
 
+    // Verificar se a loja está aberta antes de enviar
+    try {
+      const storeOpenSnapshot = await database.ref("storeOpen").once("value");
+      const isStoreOpen = storeOpenSnapshot.val() !== false; // Default true
+
+      if (!isStoreOpen) {
+        showToast("🔴 Desculpe, a loja está fechada no momento!");
+        return;
+      }
+    } catch (error) {
+      console.warn("Erro ao verificar status da loja, prosseguindo:", error);
+      // Em caso de erro, permite o pedido (fail-safe)
+    }
+
     if (AppState.deliveryType === "delivery") {
       if (!data.neighborhood) {
         showToast("⚠️ Selecione o bairro de entrega");
+        return;
+      }
+
+      if (!data.street || data.street.trim() === "") {
+        showToast("⚠️ Informe o endereço (Rua/Av)");
+        return;
+      }
+
+      if (!data.houseNumber || data.houseNumber.trim() === "") {
+        showToast("⚠️ Informe o número da casa");
         return;
       }
 
@@ -1725,6 +1788,9 @@ const CheckoutManager = {
         value: data.neighborhood,
         text: selectedOption?.textContent.split(" - ")[0] || "",
       };
+
+      // Montar o endereço completo a partir dos campos separados
+      data.address = `${data.street.trim()}, ${data.houseNumber.trim()}`;
     }
 
     OrderSender.sendToWhatsApp(data);
@@ -1919,9 +1985,10 @@ const OrderSender = {
 
       if (AppState.deliveryType === "delivery") {
         pedido.modoConsumo = "🛵 ENTREGA";
-        pedido.endereco = `${data.address}`;
-        if (data.complement) {
-          pedido.endereco += ` - ${data.complement}`;
+        // O endereço já vem montado do processCheckout
+        pedido.endereco = data.address || "";
+        if (data.complement && data.complement.trim() !== "") {
+          pedido.endereco += ` - ${data.complement.trim()}`;
         }
         // Adicionar bairro
         if (data.neighborhoodInfo) {
@@ -2041,6 +2108,9 @@ const EventListeners = {
 const App = {
   async init() {
     try {
+      // Inicializar modal de boas-vindas PRIMEIRO
+      WelcomeModal.init();
+
       initFirebase();
       AppState.cardapioData = await MenuService.loadMenu();
       CategoriesUI.render(Object.keys(AppState.cardapioData));

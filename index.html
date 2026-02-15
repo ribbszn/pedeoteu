@@ -33,6 +33,45 @@
     <!-- Overlay -->
     <div class="overlay" data-overlay></div>
 
+    <!-- Modal de Boas-vindas -->
+    <div class="welcome-modal" id="welcome-modal">
+      <div class="welcome-modal-content">
+        <div class="welcome-logo">
+          <img src="img/logo800.png" alt="RIBBS ZN Logo" />
+        </div>
+        <h2>Bem-vindo ao RIBBS ZN!</h2>
+        <div class="welcome-text">
+          <p><strong>Este é nosso cardápio digital completo!</strong></p>
+          <p>
+            Você pode fazer seu pedido aqui mesmo e ele será enviado
+            <strong>diretamente para nossa loja</strong>.
+          </p>
+          <div class="welcome-features">
+            <div class="feature-item">
+              <span class="feature-icon">🍔</span>
+              <span>Escolha seus produtos</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🎨</span>
+              <span>Personalize como quiser</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">🛵</span>
+              <span>Entrega ou Retirada</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-icon">📱</span>
+              <span>Peça do conforto de casa</span>
+            </div>
+          </div>
+          <p class="welcome-cta">Bora pedir? 😋</p>
+        </div>
+        <button class="btn-welcome-close" id="btn-welcome-close">
+          CLIQUE AQUI PARA INICIAR SEU PEDIDO!
+        </button>
+      </div>
+    </div>
+
     <!-- Modal de Personalização -->
     <div class="modal" data-modal role="dialog" aria-modal="true">
       <div class="modal-content">
@@ -126,11 +165,20 @@
             </select>
           </fieldset>
 
+          <!-- Endereço separado em Rua e Número -->
           <input
             type="text"
-            name="address"
-            placeholder="Endereço (Rua e Número) *"
+            name="street"
+            placeholder="Endereço (Rua/Av) *"
             class="form-input"
+            data-delivery-required
+          />
+          <input
+            type="text"
+            name="houseNumber"
+            placeholder="Nº da Casa *"
+            class="form-input"
+            data-delivery-required
           />
           <input
             type="text"
