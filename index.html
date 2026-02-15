@@ -90,7 +90,26 @@
       </div>
     </div>
 
-    <!-- Sidebar Carrinho -->
+    <!-- ============================================ -->
+    <!-- MODAL: CAMPO GRANDE -->
+    <!-- ============================================ -->
+    <div class="modal-campo-grande" id="modal-campo-grande">
+      <div class="modal-campo-grande-content">
+        <div class="modal-campo-grande-icon">📍</div>
+        <h3>Taxa de Entrega</h3>
+        <p>
+          Para este bairro, calculamos o valor da entrega com base na distância
+          da loja.
+        </p>
+        <button class="btn-campo-grande-ok" id="btn-campo-grande-ok">
+          Clique aqui para continuar
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SIDEBAR 1: CARRINHO -->
+    <!-- ============================================ -->
     <aside class="sidebar" data-sidebar role="complementary">
       <div class="sidebar-header">
         <h2>Meu Pedido</h2>
@@ -105,130 +124,171 @@
 
       <div class="cart-items" data-cart-items></div>
 
-      <form class="checkout-form" data-checkout-form>
-        <!-- Tipo de Pedido -->
-        <fieldset>
-          <legend class="form-label">🛵 Tipo de Pedido</legend>
-          <div class="delivery-toggle">
-            <button type="button" data-delivery-type="delivery">Entrega</button>
-            <button type="button" data-delivery-type="pickup" class="active">
-              Retirada
-            </button>
-          </div>
-        </fieldset>
-
-        <!-- Nome -->
-        <input
-          type="text"
-          name="customerName"
-          placeholder="Seu Nome *"
-          class="form-input"
-          required
-        />
-
-        <!-- Campos de Entrega -->
-        <div data-delivery-fields style="display: none">
-          <fieldset>
-            <legend class="form-label">📍 Bairro de Entrega</legend>
-            <select
-              name="neighborhood"
-              class="form-input"
-              data-neighborhood-select
-            >
-              <option value="">Selecione o bairro...</option>
-              <option value="agua-fria" data-fee="6">
-                Água Fria - R$ 6,00
-              </option>
-              <option value="arruda" data-fee="5">Arruda - R$ 5,00</option>
-              <option value="cajueiro" data-fee="6">Cajueiro - R$ 6,00</option>
-              <option value="campo-grande" data-fee="0">
-                Campo Grande - Taxa a combinar
-              </option>
-              <option value="campina-barreto" data-fee="4">
-                Campina do Barreto - R$ 4,00
-              </option>
-              <option value="encruzilhada" data-fee="5">
-                Encruzilhada - R$ 5,00
-              </option>
-              <option value="hipodromo" data-fee="6">
-                Hipódromo - R$ 6,00
-              </option>
-              <option value="peixinhos" data-fee="5">
-                Peixinhos - R$ 5,00
-              </option>
-              <option value="salgadinho" data-fee="5">
-                Salgadinho - R$ 5,00
-              </option>
-              <option value="sitio-novo" data-fee="3">
-                Sítio Novo - R$ 3,00
-              </option>
-            </select>
-          </fieldset>
-
-          <!-- Endereço separado em Rua e Número -->
-          <input
-            type="text"
-            name="street"
-            placeholder="Endereço (Rua/Av) *"
-            class="form-input"
-            data-delivery-required
-          />
-          <input
-            type="text"
-            name="houseNumber"
-            placeholder="Nº da Casa *"
-            class="form-input"
-            data-delivery-required
-          />
-          <input
-            type="text"
-            name="complement"
-            placeholder="Complemento (Apto, Bloco, etc)"
-            class="form-input"
-          />
-
-          <!-- Taxa de Entrega -->
-          <div
-            class="delivery-fee-display"
-            data-delivery-fee-display
-            style="display: none"
-          >
-            <span>Taxa de Entrega:</span>
-            <span data-delivery-fee-value>R$ 0,00</span>
-          </div>
-        </div>
-
-        <!-- Forma de Pagamento -->
-        <fieldset>
-          <legend class="form-label">💳 Forma de Pagamento</legend>
-          <select name="paymentMethod" class="form-input" required>
-            <option value="">Selecione...</option>
-            <option value="pix">💚 PIX</option>
-            <option value="dinheiro">💵 Dinheiro</option>
-            <option value="debito">💳 Cartão de Débito</option>
-            <option value="credito">💳 Cartão de Crédito</option>
-          </select>
-        </fieldset>
-
-        <!-- Troco -->
-        <div data-change-field style="display: none">
-          <input
-            type="text"
-            name="changeFor"
-            placeholder="Quanto você vai pagar?"
-            class="form-input"
-          />
-        </div>
-
-        <!-- Total -->
-        <div class="total-display">
+      <div class="cart-footer">
+        <div class="cart-total-bar">
           <span>Total:</span>
           <span data-total-cart>R$ 0,00</span>
         </div>
+        <button class="btn-finalizar-pedido" id="btn-finalizar-pedido">
+          FINALIZAR PEDIDO &#8594;
+        </button>
+      </div>
+    </aside>
 
-        <!-- Botão Finalizar -->
-        <button type="submit" class="btn-checkout">ENVIAR PEDIDO</button>
-      </form>
+    <!-- ============================================ -->
+    <!-- SIDEBAR 2: CHECKOUT -->
+    <!-- ============================================ -->
+    <aside
+      class="sidebar sidebar-checkout"
+      id="sidebar-checkout"
+      role="complementary"
+    >
+      <div class="sidebar-header">
+        <button
+          class="btn-back-to-cart"
+          id="btn-back-to-cart"
+          aria-label="Voltar"
+        >
+          &#8592; Voltar
+        </button>
+        <h2>Finalizar</h2>
+        <button
+          class="btn-close-sidebar"
+          id="btn-close-checkout"
+          aria-label="Fechar"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="checkout-scroll">
+        <form class="checkout-form" data-checkout-form>
+          <!-- Tipo de Pedido -->
+          <fieldset>
+            <legend class="form-label">🛵 Tipo de Pedido</legend>
+            <div class="delivery-toggle">
+              <button type="button" data-delivery-type="delivery">
+                Entrega
+              </button>
+              <button type="button" data-delivery-type="pickup" class="active">
+                Retirada
+              </button>
+            </div>
+          </fieldset>
+
+          <!-- Nome -->
+          <input
+            type="text"
+            name="customerName"
+            placeholder="Seu Nome *"
+            class="form-input"
+            required
+          />
+
+          <!-- Campos de Entrega -->
+          <div data-delivery-fields style="display: none">
+            <fieldset>
+              <legend class="form-label">📍 Bairro de Entrega</legend>
+              <select
+                name="neighborhood"
+                class="form-input"
+                data-neighborhood-select
+              >
+                <option value="">Selecione o bairro...</option>
+                <option value="agua-fria" data-fee="6">
+                  Água Fria - R$ 6,00
+                </option>
+                <option value="arruda" data-fee="5">Arruda - R$ 5,00</option>
+                <option value="cajueiro" data-fee="6">
+                  Cajueiro - R$ 6,00
+                </option>
+                <option value="campo-grande" data-fee="0">
+                  Campo Grande - Taxa a combinar
+                </option>
+                <option value="campina-barreto" data-fee="4">
+                  Campina do Barreto - R$ 4,00
+                </option>
+                <option value="encruzilhada" data-fee="5">
+                  Encruzilhada - R$ 5,00
+                </option>
+                <option value="hipodromo" data-fee="6">
+                  Hipódromo - R$ 6,00
+                </option>
+                <option value="peixinhos" data-fee="5">
+                  Peixinhos - R$ 5,00
+                </option>
+                <option value="salgadinho" data-fee="5">
+                  Salgadinho - R$ 5,00
+                </option>
+                <option value="sitio-novo" data-fee="3">
+                  Sítio Novo - R$ 3,00
+                </option>
+              </select>
+            </fieldset>
+
+            <input
+              type="text"
+              name="street"
+              placeholder="Endereço (Rua/Av) *"
+              class="form-input"
+              data-delivery-required
+            />
+            <input
+              type="text"
+              name="houseNumber"
+              placeholder="Nº da Casa *"
+              class="form-input"
+              data-delivery-required
+            />
+            <input
+              type="text"
+              name="complement"
+              placeholder="Complemento (Apto, Bloco, etc)"
+              class="form-input"
+            />
+
+            <div
+              class="delivery-fee-display"
+              data-delivery-fee-display
+              style="display: none"
+            >
+              <span>Taxa de Entrega:</span>
+              <span data-delivery-fee-value>R$ 0,00</span>
+            </div>
+          </div>
+
+          <!-- Forma de Pagamento -->
+          <fieldset>
+            <legend class="form-label">💳 Forma de Pagamento</legend>
+            <select name="paymentMethod" class="form-input" required>
+              <option value="">Selecione...</option>
+              <option value="pix">💚 PIX</option>
+              <option value="dinheiro">💵 Dinheiro</option>
+              <option value="debito">💳 Cartão de Débito</option>
+              <option value="credito">💳 Cartão de Crédito</option>
+            </select>
+          </fieldset>
+
+          <!-- Troco -->
+          <div data-change-field style="display: none">
+            <input
+              type="text"
+              name="changeFor"
+              placeholder="Quanto você vai pagar?"
+              class="form-input"
+            />
+          </div>
+
+          <!-- Total -->
+          <div class="total-display">
+            <span>Total:</span>
+            <span data-total-cart>R$ 0,00</span>
+          </div>
+
+          <!-- Botão Finalizar -->
+          <button type="submit" class="btn-checkout">ENVIAR PEDIDO</button>
+        </form>
+      </div>
     </aside>
 
     <div id="toast-container" class="toast-container"></div>

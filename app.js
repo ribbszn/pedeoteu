@@ -94,6 +94,7 @@ const AppState = {
   comboData: null,
   currentBurgerIndex: 0,
   comboItems: [],
+  isProcessingUpgrades: false, // ✅ NOVO: Flag para indicar que estamos processando upgrades
 
   // Controle de steps
   currentStep: 0,
@@ -844,7 +845,6 @@ const OrderFlow = {
 
     if (AppState.stepsData.length === 0) {
       CartManager.add(AppState.tempItem);
-      showToast("✅ Item adicionado!");
       return;
     }
 
@@ -1046,7 +1046,12 @@ const OrderFlow = {
 
     const isLastStep = AppState.currentStep === AppState.stepsData.length - 1;
 
-    if (AppState.isCombo) {
+    // ✅ Se estamos processando upgrades, ajustar texto do botão
+    if (AppState.isProcessingUpgrades) {
+      btnNext.textContent = isLastStep
+        ? "ADICIONAR COMBO AO CARRINHO"
+        : "PRÓXIMO";
+    } else if (AppState.isCombo) {
       const isLastBurger =
         AppState.currentBurgerIndex ===
         AppState.comboData.itemRef.burgers.length - 1;
@@ -1279,6 +1284,12 @@ const OrderFlow = {
   renderBatataUpgrade(title, body, upgrades) {
     title.textContent = "Escolha a Batata 🍟";
 
+    // ✅ Se não houver seleção prévia, selecionar a primeira opção automaticamente
+    if (!AppState.comboData.selectedBatata) {
+      AppState.comboData.selectedBatata = upgrades[0].nome;
+      AppState.comboData.batataPriceAdjust = upgrades[0].adicional || 0;
+    }
+
     const currentSelection = AppState.comboData.selectedBatata;
 
     body.innerHTML = upgrades
@@ -1314,6 +1325,12 @@ const OrderFlow = {
 
   renderBebidaUpgrade(title, body, upgrades) {
     title.textContent = "Escolha a Bebida 🥤";
+
+    // ✅ Se não houver seleção prévia, selecionar a primeira opção automaticamente
+    if (!AppState.comboData.selectedBebida) {
+      AppState.comboData.selectedBebida = upgrades[0].nome;
+      AppState.comboData.bebidaPriceAdjust = upgrades[0].adicional || 0;
+    }
 
     const currentSelection = AppState.comboData.selectedBebida;
 
@@ -1378,6 +1395,13 @@ const OrderFlow = {
   },
 
   completeCurrentItem() {
+    // ✅ Se estamos processando upgrades, finalizar o combo
+    if (AppState.isProcessingUpgrades) {
+      AppState.isProcessingUpgrades = false; // Reset da flag
+      this.finalizeCombo();
+      return;
+    }
+
     if (AppState.isCombo) {
       this.saveComboItem();
 
@@ -1416,16 +1440,10 @@ const OrderFlow = {
     ];
 
     AppState.currentStep = 0;
+    AppState.isProcessingUpgrades = true; // ✅ Flag para indicar que estamos nos upgrades
     this.renderCurrentStep();
 
-    DOM.elements.btnNext.onclick = () => {
-      if (AppState.currentStep === 0) {
-        AppState.currentStep = 1;
-        this.renderCurrentStep();
-      } else {
-        this.finalizeCombo();
-      }
-    };
+    // ✅ NÃO sobrescrever onclick - deixar fluxo normal de nextStep() funcionar
   },
 
   finalizeCombo() {
@@ -1454,7 +1472,6 @@ const OrderFlow = {
     };
 
     CartManager.add(comboItem);
-    showToast("✅ Combo adicionado!");
     ModalUI.close();
   },
 
@@ -1468,7 +1485,6 @@ const OrderFlow = {
       AppState.tempItem.selectedPrice + extrasTotal;
 
     CartManager.add(AppState.tempItem);
-    showToast("✅ Item adicionado!");
     ModalUI.close();
   },
 };
@@ -1793,8 +1809,59 @@ const CheckoutManager = {
       data.address = `${data.street.trim()}, ${data.houseNumber.trim()}`;
     }
 
-    OrderSender.sendToWhatsApp(data);
-    OrderSender.sendToKDS(data);
+    // ✅ CORREÇÃO: Enviar pedidos e DEPOIS limpar/fechar
+    try {
+      // Mostrar loading
+      showToast("📤 Enviando pedido...");
+
+      // Enviar para WhatsApp
+      OrderSender.sendToWhatsApp(data);
+
+      // Enviar para KDS
+      await OrderSender.sendToKDS(data);
+
+      // ✅ Sucesso - Limpar e fechar
+      showToast("✅ Pedido enviado com sucesso!");
+
+      // Aguardar um pouco para o usuário ver a mensagem
+      setTimeout(() => {
+        CartManager.clear();
+        this.closeCheckout();
+        SidebarUI.close();
+      }, 1500);
+    } catch (error) {
+      console.error("Erro ao enviar pedido:", error);
+      showToast("❌ Erro ao enviar pedido. Tente novamente.");
+    }
+  },
+
+  closeCheckout() {
+    const checkoutSidebar = document.getElementById("sidebar-checkout");
+    if (checkoutSidebar) {
+      checkoutSidebar.classList.remove("active");
+    }
+    DOM.elements.overlay.classList.remove("active");
+  },
+
+  openCheckout() {
+    // Fechar sidebar do carrinho
+    SidebarUI.close();
+
+    // Aguardar animação de fechamento
+    setTimeout(() => {
+      // Abrir sidebar de checkout
+      const checkoutSidebar = document.getElementById("sidebar-checkout");
+      if (checkoutSidebar) {
+        checkoutSidebar.classList.add("active");
+      }
+      DOM.elements.overlay.classList.add("active");
+
+      // Atualizar total no checkout
+      const totalElements = document.querySelectorAll("[data-total-cart]");
+      totalElements.forEach((el) => {
+        el.textContent = Utils.formatPrice(CartManager.getTotal());
+      });
+    }, 300); // Tempo da animação de fechamento do carrinho
   },
 };
 
@@ -2011,15 +2078,11 @@ const OrderSender = {
       await newOrderRef.set(pedido);
 
       console.log("✅ Pedido enviado ao KDS!");
-      showToast("✅ Pedido enviado para a cozinha!");
 
-      setTimeout(() => {
-        CartManager.clear();
-        SidebarUI.close();
-      }, 1500);
+      // ✅ REMOVIDO: Limpeza do carrinho agora é feita em processCheckout
     } catch (error) {
       console.error("❌ Erro ao enviar pedido:", error);
-      showToast("⚠️ Erro ao enviar para a cozinha");
+      throw error; // ✅ Propagar erro para processCheckout tratar
     }
   },
 };
@@ -2090,10 +2153,43 @@ const EventListeners = {
     DOM.elements.overlay?.addEventListener("click", () => {
       const modalActive = DOM.elements.modal.classList.contains("active");
       const sidebarActive = DOM.elements.sidebar.classList.contains("active");
+      const checkoutActive = document
+        .getElementById("sidebar-checkout")
+        ?.classList.contains("active");
 
       if (modalActive) ModalUI.close();
+      else if (checkoutActive) CheckoutManager.closeCheckout();
       else if (sidebarActive) SidebarUI.close();
     });
+
+    // ✅ NOVO: Event listener do botão "Finalizar Pedido"
+    const btnFinalizarPedido = document.getElementById("btn-finalizar-pedido");
+    if (btnFinalizarPedido) {
+      btnFinalizarPedido.addEventListener("click", () => {
+        if (AppState.cart.length === 0) {
+          showToast("⚠️ Seu carrinho está vazio");
+          return;
+        }
+        CheckoutManager.openCheckout();
+      });
+    }
+
+    // ✅ NOVO: Event listener do botão "Voltar" do checkout
+    const btnBackToCart = document.getElementById("btn-back-to-cart");
+    if (btnBackToCart) {
+      btnBackToCart.addEventListener("click", () => {
+        CheckoutManager.closeCheckout();
+        SidebarUI.open();
+      });
+    }
+
+    // ✅ NOVO: Event listener do botão "X" (fechar) do checkout
+    const btnCloseCheckout = document.getElementById("btn-close-checkout");
+    if (btnCloseCheckout) {
+      btnCloseCheckout.addEventListener("click", () => {
+        CheckoutManager.closeCheckout();
+      });
+    }
 
     window.addEventListener("scroll", CategoriesUI.updateActiveOnScroll);
 
