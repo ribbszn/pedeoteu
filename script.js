@@ -1201,8 +1201,10 @@ window.closePix = closePix;
 
 function confirmPix() {
   playSound("confirm");
+  // FIX: define splitPayments antes de prosseguir — sem isso o pagamento chegava como "Não definido"
+  splitPayments = [{ value: getCartTotal(), method: "PIX", troco: 0 }];
   closePix();
-  openTipoConsumoModal(); // NOVO PASSO
+  openTipoConsumoModal();
 }
 window.confirmPix = confirmPix;
 
@@ -1515,11 +1517,24 @@ function sendOrder() {
     return itemFormatado;
   });
 
-  // Formata os pagamentos
+  // FIX: normaliza nomes e garante que splitPayments vazio não produza "Não definido"
+  const paymentLabels = {
+    PIX: "PIX",
+    Dinheiro: "Dinheiro",
+    "Dinheiro Exato": "Dinheiro",
+    Crédito: "Cartão de Crédito",
+    Débito: "Cartão de Débito",
+  };
   const pagamentosFormatados =
     splitPayments.length > 0
-      ? splitPayments.map((p) => p.metodo || p).join(", ")
-      : "Não definido";
+      ? splitPayments
+          .map((p) => {
+            const raw =
+              p.method || p.metodo || (typeof p === "string" ? p : "");
+            return paymentLabels[raw] || raw || "?";
+          })
+          .join(", ")
+      : "Não informado";
 
   const orderData = {
     tipo: "mesa",

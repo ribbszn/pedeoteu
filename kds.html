@@ -123,6 +123,7 @@
 
       /* Hide main content initially */
       .kds-header,
+      .kds-sidebar,
       .kds-main {
         display: none;
       }
@@ -197,10 +198,6 @@
     <header class="kds-header">
       <div class="header-left">
         <h1>🔥 RIBBS ZN - KDS</h1>
-        <div class="status-indicator">
-          <span class="status-dot" id="firebase-status"></span>
-          <span id="status-text">Conectando...</span>
-        </div>
       </div>
 
       <div class="header-center">
@@ -221,26 +218,39 @@
           </div>
         </div>
       </div>
+    </header>
 
-      <div class="header-right">
-        <button class="header-btn" id="btn-menu-management">
-          <span>📋</span>
-          <span>Gestão Cardápio</span>
+    <!-- Sidebar -->
+    <nav class="kds-sidebar">
+      <div class="sidebar-top">
+        <button class="sidebar-btn" id="btn-menu-management">
+          <span class="sidebar-btn-icon">📋</span>
+          <span class="sidebar-btn-label">Gestão Cardápio</span>
         </button>
-        <button class="header-btn" id="btn-ingredients-management">
-          <span>🥬</span>
-          <span>Gestão Insumos</span>
+        <button class="sidebar-btn" id="btn-ingredients-management">
+          <span class="sidebar-btn-icon">🥬</span>
+          <span class="sidebar-btn-label">Gestão Insumos</span>
         </button>
-        <button class="header-btn" id="btn-history">
-          <span>📜</span>
-          <span>Histórico</span>
+        <button class="sidebar-btn" id="btn-history">
+          <span class="sidebar-btn-icon">📜</span>
+          <span class="sidebar-btn-label">Histórico</span>
         </button>
-        <button class="header-btn sound-toggle" id="btn-sound">
-          <span>🔔</span>
-          <span id="sound-status">Som: ON</span>
+        <button class="sidebar-btn sound-toggle" id="btn-sound">
+          <span class="sidebar-btn-icon">🔔</span>
+          <span class="sidebar-btn-label" id="sound-status">Som: ON</span>
         </button>
       </div>
-    </header>
+      <div class="sidebar-bottom">
+        <div class="sidebar-status">
+          <span class="status-dot" id="firebase-status"></span>
+          <span class="sidebar-btn-label" id="status-text">Conectando...</span>
+        </div>
+        <button class="sidebar-btn sidebar-btn-logout" onclick="logoutKDS()">
+          <span class="sidebar-btn-icon">🚪</span>
+          <span class="sidebar-btn-label">Sair</span>
+        </button>
+      </div>
+    </nav>
 
     <!-- Main Content -->
     <main class="kds-main">
@@ -574,5 +584,25 @@
 
     <!-- KDS Script -->
     <script src="kds.js"></script>
+
+    <script>
+      // Mostra sidebar quando o header for exibido pelo firebase-init-auth.js
+      (function () {
+        const header = document.querySelector(".kds-header");
+        const sidebar = document.querySelector(".kds-sidebar");
+        if (!header || !sidebar) return;
+
+        const observer = new MutationObserver(function () {
+          if (header.style.display && header.style.display !== "none") {
+            sidebar.style.display = "flex";
+          }
+        });
+
+        observer.observe(header, {
+          attributes: true,
+          attributeFilter: ["style"],
+        });
+      })();
+    </script>
   </body>
 </html>

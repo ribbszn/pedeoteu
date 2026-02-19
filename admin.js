@@ -477,7 +477,7 @@ function createMenuCard(item) {
           </div>
           <div class="availability-toggle">
             <div class="toggle-switch ${statusClass}" 
-                 onclick="toggleAvailability('${itemKey}', ${item.disponivel})">
+                 onclick="toggleAvailability('${itemKey}', ${item.disponivel}, '${item.categoria}')">
             </div>
           </div>
         </div>
@@ -557,17 +557,23 @@ function refreshMenuData() {
 // TOGGLE DE DISPONIBILIDADE
 // ================================================================
 
-async function toggleAvailability(itemKey, currentStatus) {
+async function toggleAvailability(itemKey, currentStatus, categoria) {
   const newStatus = !currentStatus;
 
-  try {
-    await firebase.database().ref(`menuAvailability/${itemKey}`).set(newStatus);
+  // FIX: kds.js e app.js leem menuAvailability com chave "Categoria:Nome"
+  // O admin salvava com sanitizeKey(nome) — formato incompatível
+  const kdsKey = categoria
+    ? `${categoria}:${_resolveItemName(itemKey)}`
+    : itemKey;
 
-    console.log(`✅ ${itemKey} → ${newStatus ? "Ativo" : "Esgotado"}`);
+  try {
+    await firebase.database().ref(`menuAvailability/${kdsKey}`).set(newStatus);
+
+    console.log(`✅ ${kdsKey} → ${newStatus ? "Ativo" : "Esgotado"}`);
 
     // Atualizar localmente
-    Object.keys(menuData).forEach((categoria) => {
-      menuData[categoria].forEach((item) => {
+    Object.keys(menuData).forEach((cat) => {
+      menuData[cat].forEach((item) => {
         if (sanitizeKey(item.nome) === itemKey) {
           item.disponivel = newStatus;
         }
@@ -580,6 +586,16 @@ async function toggleAvailability(itemKey, currentStatus) {
     console.error("❌ Erro ao alterar disponibilidade:", error);
     alert("Erro ao alterar disponibilidade");
   }
+}
+
+// Helper: converte sanitizeKey de volta para nome original buscando em menuData
+function _resolveItemName(itemKey) {
+  for (const cat of Object.keys(menuData || {})) {
+    for (const item of menuData[cat]) {
+      if (sanitizeKey(item.nome) === itemKey) return item.nome;
+    }
+  }
+  return itemKey;
 }
 
 // ================================================================
@@ -785,6 +801,13 @@ async function saveItemChanges() {
     const db = firebase.database();
 
     // 1. Salvar disponibilidade do item principal
+    // FIX: kds.js e app.js leem com chave "Categoria:Nome", não sanitizeKey(nome)
+    const kdsItemKey = `${categoria}:${currentEditingItem.nome}`;
+    await db
+      .ref(`menuAvailability/${kdsItemKey}`)
+      .set(currentEditingItem.disponivel);
+
+    // FIX: também salvar no formato antigo para compatibilidade com código que ainda usa sanitizeKey
     await db
       .ref(`menuAvailability/${itemKey}`)
       .set(currentEditingItem.disponivel);
@@ -938,21 +961,23 @@ async function loadInsumosData() {
     let caldasAvail = {};
 
     try {
+      // FIX: ler do mesmo nó que kds.js e app.js usam
       const paidExtrasSnap = await db
-        .ref("globalPaidExtrasAvailability")
+        .ref("paidExtrasAvailability")
         .once("value");
       globalPaidExtrasAvail = paidExtrasSnap.val() || {};
     } catch (err) {
-      console.warn("⚠️ Nó globalPaidExtrasAvailability não existe");
+      console.warn("⚠️ Nó paidExtrasAvailability não existe");
     }
 
     try {
+      // FIX: ler do mesmo nó que kds.js e app.js usam
       const ingredientsSnap = await db
-        .ref("globalIngredientsAvailability")
+        .ref("ingredientsAvailability")
         .once("value");
       globalIngredientsAvail = ingredientsSnap.val() || {};
     } catch (err) {
-      console.warn("⚠️ Nó globalIngredientsAvailability não existe");
+      console.warn("⚠️ Nó ingredientsAvailability não existe");
     }
 
     try {
@@ -1130,10 +1155,12 @@ async function toggleGlobalInsumo(type, key, currentStatus) {
 
     switch (type) {
       case "paidExtra":
-        path = `globalPaidExtrasAvailability/${key}`;
+        // FIX: kds.js e app.js leem de "paidExtrasAvailability", não "globalPaidExtrasAvailability"
+        path = `paidExtrasAvailability/${key}`;
         break;
       case "ingredient":
-        path = `globalIngredientsAvailability/${key}`;
+        // FIX: kds.js e app.js leem de "ingredientsAvailability", não "globalIngredientsAvailability"
+        path = `ingredientsAvailability/${key}`;
         break;
       case "calda":
         path = `milkshakeCaldas/${key}`;

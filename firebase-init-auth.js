@@ -69,7 +69,7 @@ auth.onAuthStateChanged((user) => {
 
     if (loginScreen) loginScreen.style.display = "none";
     if (mainHeader) mainHeader.style.display = "flex";
-    if (mainContent) mainContent.style.display = "flex";
+    if (mainContent) mainContent.style.display = "grid"; // FIX: era "flex", quebrava o layout de 2 colunas
 
     if (typeof window.initKDS === "function") {
       window.initKDS();
