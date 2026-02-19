@@ -301,8 +301,8 @@ function parseOrderItem(item) {
         parsed.sem = items.split(",").map((i) => i.trim());
       }
       // Detectar adicionais
-      else if (line.match(/adiciona|adicionais:/i)) {
-        const items = line.replace(/adiciona|adicionais:/i, "").trim();
+      else if (line.match(/^adicionais?:/i)) {
+        const items = line.replace(/^adicionais?:/i, "").trim();
         parsed.adicionais = items.split(",").map((i) => i.trim());
       }
       // Outras observações
@@ -379,8 +379,8 @@ function parseComboItems(qty, comboName, obs) {
           .split(",")
           .map((i) => i.trim())
           .filter(Boolean);
-      } else if (part.match(/^adiciona|^adicionais:/i)) {
-        const items = part.replace(/adiciona|adicionais:/i, "").trim();
+      } else if (part.match(/^adicionais?:/i)) {
+        const items = part.replace(/^adicionais?:/i, "").trim();
         currentItem.adicionais = items
           .split(",")
           .map((i) => i.trim())
@@ -969,14 +969,16 @@ function startBeep(orderId) {
 }
 
 function stopBeep(orderId) {
-  // FIX: só para o beep se este pedido específico o registrou
   if (!State.beepIntervals[orderId]) return;
 
-  const beepAudio = document.getElementById("beep-sound");
-  beepAudio.pause();
-  beepAudio.currentTime = 0;
-
   delete State.beepIntervals[orderId];
+
+  // Só pausa o áudio se não houver mais nenhum pedido aguardando beep
+  if (Object.keys(State.beepIntervals).length === 0) {
+    const beepAudio = document.getElementById("beep-sound");
+    beepAudio.pause();
+    beepAudio.currentTime = 0;
+  }
 }
 
 // ================================
@@ -1941,7 +1943,15 @@ function extractIngredientsAndExtras() {
 
 async function loadIngredientsData() {
   if (!State.menuData) {
-    await loadMenuData();
+    // Só busca os dados sem renderizar o modal de cardápio
+    try {
+      const response = await fetch(CONFIG.menuDataUrl);
+      State.menuData = await response.json();
+    } catch (error) {
+      console.error("Erro ao carregar cardápio para insumos:", error);
+      showToast("Erro ao carregar dados do cardápio", "error");
+      return;
+    }
   }
 
   renderIngredientsTab();
@@ -2226,24 +2236,5 @@ window.initKDS = function () {
   console.log("✅ KDS inicializado após autenticação");
 };
 
-(function () {
-  function init() {
-    // Check if user is already authenticated
-    if (window.firebaseAuth) {
-      const user = window.firebaseAuth.currentUser;
-      if (user) {
-        // User is already logged in, initialize immediately
-        window.initKDS();
-      } else {
-        console.log("🔐 Aguardando autenticação...");
-        // initKDS will be called by firebase-init-auth.js after successful login
-      }
-    }
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
+// initKDS é chamado exclusivamente pelo firebase-init-auth.js após autenticação confirmada.
+console.log("🔐 KDS aguardando autenticação...");

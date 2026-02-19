@@ -585,24 +585,6 @@
     <!-- KDS Script -->
     <script src="kds.js"></script>
 
-    <script>
-      // Mostra sidebar quando o header for exibido pelo firebase-init-auth.js
-      (function () {
-        const header = document.querySelector(".kds-header");
-        const sidebar = document.querySelector(".kds-sidebar");
-        if (!header || !sidebar) return;
-
-        const observer = new MutationObserver(function () {
-          if (header.style.display && header.style.display !== "none") {
-            sidebar.style.display = "flex";
-          }
-        });
-
-        observer.observe(header, {
-          attributes: true,
-          attributeFilter: ["style"],
-        });
-      })();
-    </script>
+    <!-- Sidebar é exibida diretamente pelo firebase-init-auth.js após autenticação -->
   </body>
 </html>

@@ -40,10 +40,9 @@ auth
 // ================================================================
 // LOGOUT AO FECHAR ABA
 // ================================================================
-
-window.addEventListener("beforeunload", () => {
-  auth.signOut();
-});
+// REMOVIDO: beforeunload com auth.signOut() é assíncrono e o browser
+// não espera a Promise resolver. A persistência SESSION já garante
+// que fechar a aba/browser invalida a sessão automaticamente.
 
 // ================================================================
 // CONTROLE DE AUTENTICAÇÃO
@@ -54,11 +53,13 @@ let isAuthenticated = false;
 const loginScreen = document.getElementById("login-screen");
 const mainHeader = document.querySelector(".kds-header");
 const mainContent = document.querySelector(".kds-main");
+const mainSidebar = document.querySelector(".kds-sidebar");
 
 // Sempre começa mostrando login
 if (loginScreen) loginScreen.style.display = "flex";
 if (mainHeader) mainHeader.style.display = "none";
 if (mainContent) mainContent.style.display = "none";
+if (mainSidebar) mainSidebar.style.display = "none";
 
 // Listener oficial do Firebase
 auth.onAuthStateChanged((user) => {
@@ -70,6 +71,7 @@ auth.onAuthStateChanged((user) => {
     if (loginScreen) loginScreen.style.display = "none";
     if (mainHeader) mainHeader.style.display = "flex";
     if (mainContent) mainContent.style.display = "grid"; // FIX: era "flex", quebrava o layout de 2 colunas
+    if (mainSidebar) mainSidebar.style.display = "flex";
 
     if (typeof window.initKDS === "function") {
       window.initKDS();
@@ -80,6 +82,7 @@ auth.onAuthStateChanged((user) => {
     if (loginScreen) loginScreen.style.display = "flex";
     if (mainHeader) mainHeader.style.display = "none";
     if (mainContent) mainContent.style.display = "none";
+    if (mainSidebar) mainSidebar.style.display = "none";
   }
 });
 

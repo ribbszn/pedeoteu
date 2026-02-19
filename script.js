@@ -278,12 +278,13 @@ function getIngredsForComboCompat(item, burgerName) {
   ) {
     ingredientsList = item.simplesIngredients;
   } else if (
-    item.duploIngredients &&
+    (item.duploIngredients || item.DuploIngredients) &&
     (bName.includes("duplo") ||
       bName.includes("smash duplo") ||
       bName.includes("triplo"))
   ) {
-    ingredientsList = item.duploIngredients;
+    // FIX: fallback para DuploIngredients com D maiúsculo (inconsistência no JSON)
+    ingredientsList = item.duploIngredients || item.DuploIngredients;
   } else if (item.PromoIngredients && bName.includes("cremoso")) {
     ingredientsList = item.PromoIngredients;
   } else {

@@ -47,7 +47,6 @@ const CONFIG = {
 // FIREBASE INITIALIZATION
 // ================================
 let database = null;
-let auth = null;
 
 async function initFirebase() {
   try {
@@ -63,11 +62,7 @@ async function initFirebase() {
     }
 
     database = firebase.database();
-    auth = firebase.auth();
-
-    // Fazer login anônimo para permitir escrita no Firebase
-    await auth.signInAnonymously();
-    console.log("✅ Firebase inicializado e autenticado anonimamente");
+    console.log("✅ Firebase inicializado");
   } catch (error) {
     console.error("❌ Erro ao inicializar Firebase:", error);
   }
@@ -930,7 +925,13 @@ const OrderFlow = {
     if (lowerName.includes("simples")) {
       return item.simplesIngredients || item.ingredientesPadrao || [];
     } else if (lowerName.includes("duplo")) {
-      return item.duploIngredients || item.ingredientesPadrao || [];
+      // FIX: fallback para DuploIngredients com D maiúsculo (inconsistência no JSON)
+      return (
+        item.duploIngredients ||
+        item.DuploIngredients ||
+        item.ingredientesPadrao ||
+        []
+      );
     } else if (lowerName.includes("triplo")) {
       return item.triploIngredients || item.ingredientesPadrao || [];
     } else if (lowerName.includes("cremoso")) {
@@ -986,10 +987,10 @@ const OrderFlow = {
   buildStepsForItem(item, selectedSize) {
     const steps = [];
 
-    // Adiciona ponto da carne se for categoria Artesanais
+    // Adiciona ponto da carne se o item definir pontoCarne no JSON
     const pontosPadrao = ["Mal passado", "Ao ponto", "Bem passado"];
-    if (item.categoria === "Artesanais" || item.pontoCarne) {
-      steps.push({ type: "meatPoint", data: item.pontoCarne || pontosPadrao });
+    if (item.pontoCarne) {
+      steps.push({ type: "meatPoint", data: item.pontoCarne });
     }
 
     if (item.caldas && Array.isArray(item.caldas)) {
@@ -2207,7 +2208,7 @@ const App = {
       // Inicializar modal de boas-vindas PRIMEIRO
       WelcomeModal.init();
 
-      initFirebase();
+      await initFirebase(); // FIX: aguardar Firebase antes de configurar listeners
       AppState.cardapioData = await MenuService.loadMenu();
       CategoriesUI.render(Object.keys(AppState.cardapioData));
       MenuUI.render(AppState.cardapioData);
